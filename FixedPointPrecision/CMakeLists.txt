@@ -5,5 +5,10 @@ set(CMAKE_CXX_COMPILER_ID Clang)
 
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-add_executable(test main.cpp
-        fixed.cxx)
+add_library(fixed)
+target_sources(fixed
+    PUBLIC
+        FILE_SET CXX_MODULES FILES
+            fixed.cxx)
+add_executable(test main.cpp)
+target_link_libraries(test PRIVATE fixed)
