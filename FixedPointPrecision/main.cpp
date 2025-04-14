@@ -11,7 +11,11 @@ int main()
     std::cout<< static_cast<float>(c)<<std::endl;
     fx<int32_t,0>d=0b100000000000000000000000;
     std::cout<< static_cast<float>(d)<<std::endl;
-    uint8_t f=1;
-    uint32_t g=0;
-    std::cout<<(unsigned int)(f<<12)<<std::endl;
+    float e=static_cast<float>(b);
+    fx<int32_t,4>f(e);
+    std::cout<<static_cast<float>(f)<<std::endl;
+    // uint32_t a=~0;
+    // uint8_t b=(int8_t)a;
+    // auto c=a+b;
+    // std::cout<<std::hex<<int(a>>31)<<"; "<<(int16_t)b<<"\n";
 }
