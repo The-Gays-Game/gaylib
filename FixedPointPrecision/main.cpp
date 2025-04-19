@@ -13,9 +13,11 @@ int main()
     std::cout<< static_cast<float>(d)<<std::endl;
     float e=static_cast<float>(b);
     fx<int32_t,4>f(e);
+    fx<int64_t,4>g(f);
     std::cout<<static_cast<float>(f)<<std::endl;
-    // uint32_t a=~0;
-    // uint8_t b=(int8_t)a;
-    // auto c=a+b;
-    // std::cout<<std::hex<<int(a>>31)<<"; "<<(int16_t)b<<"\n";
+    std::cout<<static_cast<float>(g)<<std::endl;
+    // uint8_t a=-1;
+    // uint16_t b=a;
+    // auto c=-a;
+    // std::cout<<std::dec<<int16_t(b)<<"; "<<(int16_t)b<<"\n";
 }
