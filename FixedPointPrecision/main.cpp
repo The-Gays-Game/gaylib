@@ -16,6 +16,12 @@ int main()
     fx<int64_t,4>g(f);
     std::cout<<static_cast<float>(f)<<std::endl;
     std::cout<<static_cast<float>(g)<<std::endl;
+    std::cout<<(f==g)<<std::endl;
+    // uint32_t a=1;
+    // int64_t b=-1;
+    // auto c=a<=>b;
+    // std::cout<<(b<a)<<" "<<(b==a)<<" "<<(b>a)<<std::endl;
+    //std::cout<<(c<0)<<" "<<(c==0)<<" "<<(c>0)<<std::endl;
     // uint8_t a=-1;
     // uint16_t b=a;
     // auto c=-a;

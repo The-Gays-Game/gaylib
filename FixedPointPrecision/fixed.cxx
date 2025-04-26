@@ -51,12 +51,11 @@ uint64_t toF64U(B v, uint8_t precision)noexcept {
     uint8_t exponent=boneSize-leading0-precision-1;
     return uint64_t(F64.maskExponent(exponent + F64.exponentBias) )<<F64.fractionBits|fraction;
 }
-
+template<class T,uint8_t P> concept testSize=sizeof(T)>=P;
 export{
-# define testSize sizeof(Bone)*CHAR_BIT>=Precision
-    template<signed_integral Bone,uint8_t Precision> requires(testSize)struct fx;
+    template<signed_integral Bone,uint8_t Precision> requires(testSize<Bone,Precision>)class fx;
 
-        template<unsigned_integral Bone,uint8_t Precision> requires(testSize)
+        template<unsigned_integral Bone,uint8_t Precision> requires(testSize<Bone,Precision>)
     struct ufx
     {
         ufx(const Bone& v):v(v){}
@@ -94,9 +93,6 @@ export{
                 this->v=normalized;
         }
 
-        constexpr
-            ufx(fx<make_signed_t<Bone>,Precision>a)noexcept:v(a.v){}
-
     //only allow conversion with 1 template param changed. when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.v=y.v<<(P1-P2) can have different value then x.v=B1(y.v)<<(P1-P2). Thus let user decide which one they want.
         template<unsigned_integral B1>constexpr
             ufx(ufx<B1,Precision>o)noexcept:v(o.v){}
@@ -109,6 +105,22 @@ export{
             else
                 v>>=P1-Precision;
         }
+            auto operator<=>(const ufx&)const=default;
+template<unsigned_integral B1>constexpr
+            auto operator<=>(ufx<B1,Precision>o)const noexcept
+            {
+                return v<=>o.v;
+            }
+            constexpr
+            strong_ordering operator<=>(fx<make_signed_t<Bone>,Precision> o)const noexcept
+{
+    if (cmp_less(v,o.v))
+        return strong_ordering::less;
+    else if (cmp_equal(v,o.v))
+        return strong_ordering::equivalent;
+    else
+        return strong_ordering::greater;
+}
 
 //conversion to float point is always possible at the cost of some precision(not all) and fast, so it's implicit.
         constexpr operator float ()const {
@@ -121,25 +133,28 @@ export{
         Bone v;
     };
 
-    template<signed_integral Bone,uint8_t Precision> requires(testSize)
-    struct fx
+    template<signed_integral Bone,uint8_t Precision> requires (testSize<Bone,Precision>)
+    class fx
     {
-    private:
         using U=make_unsigned_t<Bone>;
     public:
         fx(const Bone& v):v(v){}
-        constexpr
-        fx(ufx<U,Precision>a)noexcept:v(a.v){}
         template<floating_point F>explicit constexpr
         fx(F v):v(ufx<U,Precision>(v).v) {
             Bone sign=v<0;
             this->v=(this->v^-sign)+sign;//negate if <0.
         }
-
+        auto operator<=>(const fx<Bone,Precision>&)const=default;
+        bool operator==(const fx&)const=default;
+        //template<signed_integral B1>constexpr
+        // auto operator <=>(fx<B1,Precision>o)const noexcept
+        // {
+        //     return v<=>o.v;
+        // }
         template<signed_integral B1>constexpr
-        fx(fx<B1,Precision>o)noexcept:v(o.v){}
-        template<uint8_t P1>constexpr
-        fx(fx<Bone,P1>o)noexcept:v(ufx<U,Precision>(ufx<U,P1>(o)).v){}
+        explicit fx(fx<B1,Precision>o)noexcept:v(o.v){}
+        template<uint8_t P1>constexpr explicit
+        fx(fx<Bone,P1>o)noexcept:v(ufx<U,Precision>(bit_cast<ufx<U,P1>>(o)).v){}
 #define quickAbs(a,sign) (a-sign^-sign)//abs when we already know the sign.
         constexpr operator float ()const {
             uint32_t sign=v<0;
