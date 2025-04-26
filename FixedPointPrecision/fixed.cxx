@@ -4,6 +4,7 @@ module;
 #include<climits>
 #include<bit>
 #include<iostream>
+#include<utility>
 export module fixed;
 using namespace std;
 
@@ -18,7 +19,9 @@ constexpr struct
     uint8_t exponentBits, fractionBits;
     uint16_t exponentBias;
 
-    constexpr uint16_t maskExponent(uint16_t exponent) const noexcept
+    constexpr
+    uint16_t maskExponent(uint16_t exponent) const
+    noexcept
     {
         uint16_t exponentBitsMask = (1 << exponentBits) - 1;
         return exponent & exponentBitsMask;
@@ -27,7 +30,8 @@ constexpr struct
 
 template <unsigned_integral B>
 constexpr
-uint32_t toF32U(B v, uint8_t precision) noexcept
+uint32_t toF32U(B v, uint8_t precision)
+noexcept
 {
     constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
     uint8_t leading0 = countl_zero(v);
@@ -44,7 +48,8 @@ uint32_t toF32U(B v, uint8_t precision) noexcept
 
 template <unsigned_integral B>
 constexpr
-uint64_t toF64U(B v, uint8_t precision) noexcept
+uint64_t toF64U(B v, uint8_t precision)
+noexcept
 {
     constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
     uint8_t leading0 = countl_zero(v);
@@ -149,17 +154,18 @@ export
             return repr == o.repr;
         }
 
-        constexpr
-        strong_ordering operator<=>(fx<make_signed_t<Bone>, Precision> o) const noexcept
-        {
-            if (cmp_less(repr, o.repr))
-                return strong_ordering::less;
-            else if (cmp_equal(repr, o.repr))
-                return strong_ordering::equivalent;
-            else
-                return strong_ordering::greater;
-        }
-
+#define reuseCmp(_name,_target_)\
+    constexpr\
+    bool operator _name(fx<make_signed_t<Bone>,Precision>o)const\
+    noexcept\
+    {\
+        return o.repr _target_ repr;\
+    }
+        reuseCmp(==,==)
+        reuseCmp(<,>)
+        reuseCmp(>,<)
+        reuseCmp(<=,>=)
+        reuseCmp(>=,<=)
         //conversion to float point is always possible at the cost of some precision(not all) and fast, so it's implicit.
         constexpr
         operator float() const
@@ -213,6 +219,22 @@ export
         {
             return repr == o.repr;
         }
+
+        //intcmp functions in <utility> doesn't offer threeway for some reason. default threeway can't compare signed and unsigned.
+#define portCmp(_op, _f)\
+    constexpr\
+    bool operator _op(ufx<U,Precision>o)const\
+    noexcept\
+    {\
+        return _f(repr,o.repr);\
+    }
+        portCmp(==,cmp_equal)
+        portCmp(<,cmp_less)
+        portCmp(>,cmp_greater)
+        portCmp(<=,cmp_less_equal)
+        portCmp(>=,cmp_greater_equal)
+
+
 
         template <signed_integral B1>
         constexpr
