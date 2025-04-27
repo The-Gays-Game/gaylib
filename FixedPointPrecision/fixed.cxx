@@ -3,7 +3,6 @@ module;
 #include<cstdint>
 #include<climits>
 #include<bit>
-#include<iostream>
 #include<utility>
 export module fixed;
 using namespace std;
@@ -65,20 +64,29 @@ noexcept
 }
 
 template <class T, uint8_t P> concept testSize = sizeof(T) * CHAR_BIT >= P;
-
+/*
+ *Design choices:
+ *  implicit vs explicit:
+ *      operators that can cause 100% loss of information are explicit.
+ *      operators that can cause undefined behaviors are explicit.
+ *      operators that doesn't preserve original arithmatic meanings are explicit.
+ *  what operations are supported?
+ *      operations that have ambiguous meanings aren't supported.
+ *      operations that uses explicit operators aren't supported.
+ */
 export
 {
-    template <signed_integral Bone, uint8_t Precision> requires(testSize<Bone, Precision>)
-    class fx;
 
     template <unsigned_integral Bone, uint8_t Precision> requires(testSize<Bone, Precision>)
     struct ufx
     {
-        ufx(const Bone& v): repr(v)
+        //v's arithmatic meaning changes when Precision!=0
+        constexpr
+        explicit ufx(Bone v)
+        noexcept: repr(v)
         {
         }
-
-        //conversion from float point can cause lost of all precision or defined behavior depending on exponent, so we make this explicit.
+        //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
         constexpr
         explicit ufx(float v)
             noexcept
@@ -117,7 +125,8 @@ export
                 repr = normalized;
         }
 
-        //only allow conversion with 1 template param changed. when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). Thus let user decide which one they want.
+        //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
+
         template <unsigned_integral B1>
         constexpr
         explicit ufx(ufx<B1, Precision> o)
@@ -138,35 +147,7 @@ export
 
         strong_ordering operator<=>(const ufx&) const = default;
 
-        template <unsigned_integral B1>
-        constexpr
-        strong_ordering operator<=>(ufx<B1, Precision> o) const
-            noexcept
-        {
-            return repr <=> o.repr;
-        }
-
-        template <unsigned_integral B1>
-        constexpr
-        bool operator ==(ufx<B1, Precision> o) const
-            noexcept
-        {
-            return repr == o.repr;
-        }
-
-#define reuseCmp(_name,_target_)\
-    constexpr\
-    bool operator _name(fx<make_signed_t<Bone>,Precision>o)const\
-    noexcept\
-    {\
-        return o.repr _target_ repr;\
-    }
-        reuseCmp(==,==)
-        reuseCmp(<,>)
-        reuseCmp(>,<)
-        reuseCmp(<=,>=)
-        reuseCmp(>=,<=)
-        //conversion to float point is always possible at the cost of some precision(not all) and fast, so it's implicit.
+        //conversion to float point is always defined and never lose all precision.
         constexpr
         operator float() const
             noexcept
@@ -188,15 +169,17 @@ export
     class fx
     {
         using U = make_unsigned_t<Bone>;
-
     public:
-        fx(const Bone& v): repr(v)
+        constexpr
+        explicit fx(Bone v)
+        noexcept: repr(v)
         {
         }
 
         template <floating_point F>
         constexpr
-        explicit fx(F v): repr(ufx<U, Precision>(v).repr)
+        explicit fx(F v)
+        noexcept: repr(ufx<U, Precision>(v).repr)
         {
             Bone sign = v < 0;
             repr = (repr ^ -sign) + sign; //negate if <0.
@@ -204,37 +187,20 @@ export
 
         strong_ordering operator <=>(const fx&) const = default;
 
-        template <signed_integral B1>
+        /*intcmp functions in <utility> doesn't offer threeway. default threeway can't compare signed and unsigned.
+         *fx::U is already defined, for ufx we need to redefine make_signed_t<Bone>. we'd also need a forward declaration.
+         *comparing between signed and unsigned of same size is always meaningful arithmetically.
+         */
         constexpr
-        strong_ordering operator <=>(fx<B1, Precision> o) const
-            noexcept
-        {
-            return repr <=> o.repr;
+        strong_ordering operator<=>(ufx<U,Precision>o)const
+        noexcept
+        {//compiler will optimize if branches out if told to.
+            if (cmp_less(repr,o.repr))
+                return strong_ordering::less;
+            if (cmp_equal(repr,o.repr))
+                return strong_ordering::equivalent;
+            return strong_ordering::greater;
         }
-
-        template <signed_integral B1>
-        constexpr
-        bool operator ==(fx<B1, Precision>& o) const
-            noexcept
-        {
-            return repr == o.repr;
-        }
-
-        //intcmp functions in <utility> doesn't offer threeway for some reason. default threeway can't compare signed and unsigned.
-#define portCmp(_op, _f)\
-    constexpr\
-    bool operator _op(ufx<U,Precision>o)const\
-    noexcept\
-    {\
-        return _f(repr,o.repr);\
-    }
-        portCmp(==,cmp_equal)
-        portCmp(<,cmp_less)
-        portCmp(>,cmp_greater)
-        portCmp(<=,cmp_less_equal)
-        portCmp(>=,cmp_greater_equal)
-
-
 
         template <signed_integral B1>
         constexpr
