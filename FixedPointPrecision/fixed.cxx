@@ -29,7 +29,7 @@ constexpr struct
 
 template <unsigned_integral B>
 constexpr
-uint32_t toF32U(B v, uint8_t precision)
+uint32_t toF32U(B v, uint8_t radix)
     noexcept
 {
     constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
@@ -41,13 +41,13 @@ uint32_t toF32U(B v, uint8_t precision)
         fraction = v >> (boneSize - F32.fractionBits);
     else //lshift leading bit to fractionBit
         fraction = U(v) << (F32.fractionBits - boneSize);
-    uint8_t exponent = boneSize - leading0 - precision - 1;
+    uint8_t exponent = boneSize - leading0 - radix - 1;
     return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
 }
 
 template <unsigned_integral B>
 constexpr
-uint64_t toF64U(B v, uint8_t precision)
+uint64_t toF64U(B v, uint8_t radix)
     noexcept
 {
     constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
@@ -59,7 +59,7 @@ uint64_t toF64U(B v, uint8_t precision)
         fraction = v >> (boneSize - F64.fractionBits);
     else //lshift leading bit to fractionBit
         fraction = U(v) << (F64.fractionBits - boneSize);
-    uint8_t exponent = boneSize - leading0 - precision - 1;
+    uint8_t exponent = boneSize - leading0 - radix - 1;
     return uint64_t(F64.maskExponent(exponent + F64.exponentBias)) << F64.fractionBits | fraction;
 }
 
