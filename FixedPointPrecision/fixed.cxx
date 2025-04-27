@@ -20,7 +20,7 @@ constexpr struct
 
     constexpr
     uint16_t maskExponent(uint16_t exponent) const
-    noexcept
+        noexcept
     {
         uint16_t exponentBitsMask = (1 << exponentBits) - 1;
         return exponent & exponentBitsMask;
@@ -30,7 +30,7 @@ constexpr struct
 template <unsigned_integral B>
 constexpr
 uint32_t toF32U(B v, uint8_t precision)
-noexcept
+    noexcept
 {
     constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
     uint8_t leading0 = countl_zero(v);
@@ -48,7 +48,7 @@ noexcept
 template <unsigned_integral B>
 constexpr
 uint64_t toF64U(B v, uint8_t precision)
-noexcept
+    noexcept
 {
     constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
     uint8_t leading0 = countl_zero(v);
@@ -76,16 +76,18 @@ template <class T, uint8_t P> concept testSize = sizeof(T) * CHAR_BIT >= P;
  */
 export
 {
-
     template <unsigned_integral Bone, uint8_t Precision> requires(testSize<Bone, Precision>)
     struct ufx
     {
+        Bone repr;
+
         //v's arithmatic meaning changes when Precision!=0
         constexpr
         explicit ufx(Bone v)
-        noexcept: repr(v)
+            noexcept: repr(v)
         {
         }
+
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
         constexpr
         explicit ufx(float v)
@@ -161,45 +163,29 @@ export
         {
             return bit_cast<double>(toF64U(repr, Precision));
         }
-
-        Bone repr;
     };
 
     template <signed_integral Bone, uint8_t Precision> requires (testSize<Bone, Precision>)
     class fx
     {
         using U = make_unsigned_t<Bone>;
+
     public:
+        Bone repr;
+
         constexpr
         explicit fx(Bone v)
-        noexcept: repr(v)
+            noexcept: repr(v)
         {
         }
 
         template <floating_point F>
         constexpr
         explicit fx(F v)
-        noexcept: repr(ufx<U, Precision>(v).repr)
+            noexcept: repr(ufx<U, Precision>(v).repr)
         {
             Bone sign = v < 0;
             repr = (repr ^ -sign) + sign; //negate if <0.
-        }
-
-        strong_ordering operator <=>(const fx&) const = default;
-
-        /*intcmp functions in <utility> doesn't offer threeway. default threeway can't compare signed and unsigned.
-         *fx::U is already defined, for ufx we need to redefine make_signed_t<Bone>. we'd also need a forward declaration.
-         *comparing between signed and unsigned of same size is always meaningful arithmetically.
-         */
-        constexpr
-        strong_ordering operator<=>(ufx<U,Precision>o)const
-        noexcept
-        {//compiler will optimize if branches out if told to.
-            if (cmp_less(repr,o.repr))
-                return strong_ordering::less;
-            if (cmp_equal(repr,o.repr))
-                return strong_ordering::equivalent;
-            return strong_ordering::greater;
         }
 
         template <signed_integral B1>
@@ -214,6 +200,24 @@ export
         explicit fx(fx<Bone, P1> o)
             noexcept: repr(ufx<U, Precision>(bit_cast<ufx<U, P1>>(o)).repr)
         {
+        }
+
+        strong_ordering operator <=>(const fx&) const = default;
+
+        /*intcmp functions in <utility> doesn't offer threeway. default threeway can't compare signed and unsigned.
+         *fx::U is already defined, for ufx we need to redefine make_signed_t<Bone>. we'd also need a forward declaration.
+         *comparing between signed and unsigned of same size is always meaningful arithmetically.
+         */
+        constexpr
+        strong_ordering operator<=>(ufx<U, Precision> o) const
+            noexcept
+        {
+            //compiler will optimize if branches out when told to.
+            if (cmp_less(repr, o.repr))
+                return strong_ordering::less;
+            if (cmp_equal(repr, o.repr))
+                return strong_ordering::equivalent;
+            return strong_ordering::greater;
         }
 
 #define quickAbs(a,sign) (a-sign^-sign)//abs when we already know the sign.
@@ -235,7 +239,5 @@ export
             uint64_t r = toF64U<U>(quickAbs(repr, sign), Precision);
             return bit_cast<double>(sign << F64.exponentBits + F64.fractionBits | r);
         }
-
-        Bone repr;
     };
 }
