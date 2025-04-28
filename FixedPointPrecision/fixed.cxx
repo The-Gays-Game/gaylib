@@ -27,6 +27,30 @@ constexpr struct F64_CONFIG//when struct is unnamed, gcc14 internal compiler err
         return exponent & exponentBitsMask;
     }
 } F64{11, 52, 1023};
+template<integral B>
+constexpr
+B preRoundTo(B v,uint8_t digit,float_round_style s)//make digit the LSB, starting from 0. doesn't remove rounded digits.
+noexcept
+{
+    B offset=0;
+    switch (s)
+    {
+    case round_to_nearest://ties to even
+        offset=1<<digit>>1;
+        break;
+    case round_toward_infinity:
+        if (is_unsigned_v<B>||v>0)
+            offset=(1<<digit)-1;
+        break;
+    case round_toward_neg_infinity:
+        if (is_signed_v<B>&&v<0)
+            offset=-((1<<digit)-1);
+        break;
+    default:
+    }
+    return v+offset;
+}
+
 //TODO: support subnormal values.
 template <unsigned_integral B,float_round_style S>
 constexpr
@@ -40,9 +64,8 @@ uint32_t toF32U(B v, uint8_t radix)
     uint32_t fraction;
     if constexpr (boneSize >= F32.fractionBits)
     {//keep only first fractionBits bits.
-        if constexpr(S==round_to_nearest)
-
-        fraction = v >> (boneSize - F32.fractionBits);
+        uint8_t removed=boneSize - F32.fractionBits;
+        fraction = preRoundTo(v,removed,S) >> removed;
     }
     else //lshift leading bit to fractionBit
         fraction = U(v) << (F32.fractionBits - boneSize);
@@ -50,7 +73,7 @@ uint32_t toF32U(B v, uint8_t radix)
     return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
 }
 
-template <unsigned_integral B>
+template <unsigned_integral B,float_round_style S>
 constexpr
 uint64_t toF64U(B v, uint8_t radix)
     noexcept
@@ -60,9 +83,11 @@ uint64_t toF64U(B v, uint8_t radix)
     v <<= leading0; //drop first bit
     v <<= 1; //when leading0+1==boneSize, undefined.
     uint64_t fraction;
-    if constexpr (boneSize >= F64.fractionBits) //keep only first fractionBits bits.
-        fraction = v >> (boneSize - F64.fractionBits);
-    else //lshift leading bit to fractionBit
+    if constexpr (boneSize >= F64.fractionBits)
+    {//keep only first fractionBits bits.
+        uint8_t removed=boneSize - F64.fractionBits;
+        fraction = preRountTo(v,removed,S) >> removed;
+    }else //lshift leading bit to fractionBit
         fraction = U(v) << (F64.fractionBits - boneSize);
     uint8_t exponent = boneSize - leading0 - radix - 1;
     return uint64_t(F64.maskExponent(exponent + F64.exponentBias)) << F64.fractionBits | fraction;
