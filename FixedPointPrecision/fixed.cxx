@@ -2,6 +2,7 @@ module;
 #include<concepts>
 #include<cstdint>
 #include<climits>
+#include<limits>
 #include<bit>
 #include<utility>
 export module fixed;
@@ -26,8 +27,8 @@ constexpr struct F64_CONFIG//when struct is unnamed, gcc14 internal compiler err
         return exponent & exponentBitsMask;
     }
 } F64{11, 52, 1023};
-
-template <unsigned_integral B>
+//TODO: support subnormal values.
+template <unsigned_integral B,float_round_style S>
 constexpr
 uint32_t toF32U(B v, uint8_t radix)
     noexcept
@@ -37,8 +38,12 @@ uint32_t toF32U(B v, uint8_t radix)
     v <<= leading0; //drop first bit
     v <<= 1; //when leading0+1==boneSize, undefined.
     uint32_t fraction;
-    if constexpr (boneSize >= F32.fractionBits) //keep only first fractionBits bits.
+    if constexpr (boneSize >= F32.fractionBits)
+    {//keep only first fractionBits bits.
+        if constexpr(S==round_to_nearest)
+
         fraction = v >> (boneSize - F32.fractionBits);
+    }
     else //lshift leading bit to fractionBit
         fraction = U(v) << (F32.fractionBits - boneSize);
     uint8_t exponent = boneSize - leading0 - radix - 1;
@@ -77,7 +82,8 @@ template <class T, uint8_t R> concept testSize = sizeof(T) * CHAR_BIT >= R;
  */
 export
 {
-    template <unsigned_integral Bone, uint8_t Radix> requires(testSize<Bone, Radix>&&Radix>0)//radix==0 is equivalent to int.
+    //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
+    template <unsigned_integral Bone, uint8_t Radix,float_round_style Round=round_to_nearest> requires(testSize<Bone, Radix>&&Radix>0&&Round>round_indeterminate)//radix==0 is equivalent to int.
     struct ufx
     {
         Bone repr;
