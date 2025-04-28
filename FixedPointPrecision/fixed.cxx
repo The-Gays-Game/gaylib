@@ -12,7 +12,7 @@ constexpr struct //https://en.wikipedia.org/wiki/Single-precision_floating-point
     uint8_t exponentBits, fractionBits, exponentBias;
 } F32{8, 23, 127};
 
-constexpr struct
+constexpr struct F64_CONFIG//when struct is unnamed, gcc14 internal compiler error, gcc15 compiler error. gcc 13 and other allows.
     //https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
 {
     uint8_t exponentBits, fractionBits;
