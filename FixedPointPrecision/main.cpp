@@ -25,10 +25,8 @@ void test0()
 }
 void test3()
 {
-    // int8_t a=-5;
-    // std::cout<<std::format("{:b}",a)<<std::endl;
-    // int8_t b=preRoundTo(a,2,std::round_toward_neg_infinity);
-    // std::cout<<std::format("{:b}",b);
+    fx<int32_t, 3,std::round_to_nearest>a(0.666015625f);
+    std::cout<<std::format("{:b}",a.repr)<<std::endl;
 }
 void test1()
 {
@@ -50,7 +48,7 @@ void test2()
 }
 int main()
 {
-    test0();
+    //test0();
     //test2();
-    //test3();
+    test3();
 }
