@@ -13,7 +13,7 @@ constexpr struct //https://en.wikipedia.org/wiki/Single-precision_floating-point
     uint8_t exponentBits, fractionBits, exponentBias;
 } F32{8, 23, 127};
 
-constexpr struct F64_CONFIG//when struct is unnamed, gcc14 internal compiler error, gcc15 compiler error. gcc 13 and other allows.
+constexpr struct F64_CONFIG//https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119983.
     //https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
 {
     uint8_t exponentBits, fractionBits;
@@ -47,12 +47,13 @@ noexcept
             offset=-((1<<digit)-1);
         break;
     default:
+        {}
     }
     return v+offset;
 }
 
 //TODO: support subnormal values.
-template <unsigned_integral B,float_round_style S>
+template <float_round_style S,unsigned_integral B>
 constexpr
 uint32_t toF32U(B v, uint8_t radix)
     noexcept
@@ -73,7 +74,7 @@ uint32_t toF32U(B v, uint8_t radix)
     return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
 }
 
-template <unsigned_integral B,float_round_style S>
+template <float_round_style S,unsigned_integral B>
 constexpr
 uint64_t toF64U(B v, uint8_t radix)
     noexcept
@@ -108,7 +109,7 @@ template <class T, uint8_t R> concept testSize = sizeof(T) * CHAR_BIT >= R;
 export
 {
     //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
-    template <unsigned_integral Bone, uint8_t Radix,float_round_style Round=round_to_nearest> requires(testSize<Bone, Radix>&&Radix>0&&Round>round_indeterminate)//radix==0 is equivalent to int.
+    template <unsigned_integral Bone, uint8_t Radix,float_round_style Style=round_to_nearest> requires(testSize<Bone, Radix>&&Radix>0&&Style>round_indeterminate)//radix==0 is equivalent to int.
     struct ufx
     {
         Bone repr;
@@ -131,18 +132,20 @@ export
             noexcept
         {
             auto a = bit_cast<uint32_t>(v);
-            uint8_t exponent = uint8_t(a >> F32.fractionBits) - F32.exponentBias; //ignore sign bit for now
+            int8_t exponent = uint8_t(a >> F32.fractionBits)/*ignore sign bit*/ - F32.exponentBias;
             constexpr uint32_t fractionBitsMask = (1 << F32.fractionBits) - 1;
-            uint32_t normalized = (a & fractionBitsMask) | (fractionBitsMask + 1);
-            if (uint8_t currentRadix = F32.fractionBits - exponent; currentRadix > Radix)
-                repr = normalized >> currentRadix - Radix;
-            else if (currentRadix < Radix)
+            uint32_t fraction = (a & fractionBitsMask) | (fractionBitsMask + 1);//add implicit leading 1
+            if (int8_t currentRadix = F32.fractionBits - exponent/*when the shift operators are defined, this won't exceed int8_t's range*/; cmp_greater(currentRadix,Radix)){
+                uint8_t removed=currentRadix - Radix;
+                repr = preRoundTo(fraction,removed,Style) >> removed;
+}
+            else if (cmp_less(currentRadix,Radix))
             {
-                repr = normalized; //in case sizeof(Bone)>sizeof(float), try to retain more bits as possible.
+                repr = fraction; //in case sizeof(Bone)>sizeof(float), try to retain more bits as possible.
                 repr <<= Radix - currentRadix;
             }
             else
-                repr = normalized;
+                repr = fraction;
         }
 
         constexpr
@@ -150,18 +153,21 @@ export
             noexcept
         {
             auto a = bit_cast<uint64_t>(v);
-            uint16_t exponent = F64.maskExponent(a >> F64.fractionBits) - F64.exponentBias; //ignore sign bit for now
+            int16_t exponent = F64.maskExponent(a >> F64.fractionBits) - F64.exponentBias;
             constexpr uint64_t fractionBitsMask = (uint64_t{1} << F64.fractionBits) - 1;
-            uint64_t normalized = (a & fractionBitsMask) | (fractionBitsMask + 1);
-            if (uint16_t currentRadix = F64.fractionBits - exponent; currentRadix > Radix)
-                repr = normalized >> currentRadix - Radix;
-            else if (currentRadix < Radix)
+            uint64_t fraction = (a & fractionBitsMask) | (fractionBitsMask + 1);
+            if (int16_t currentRadix = F64.fractionBits - exponent; cmp_greater(currentRadix,Radix))
             {
-                repr = normalized;
+                uint8_t removed=currentRadix - Radix;
+                repr = preRoundTo(fraction,removed,Style) >> removed;
+            }
+            else if (cmp_less(currentRadix,Radix))
+            {
+                repr = fraction;
                 repr <<= Radix - currentRadix;
             }
             else
-                repr = normalized;
+                repr = fraction;
         }
 
         //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
@@ -198,18 +204,18 @@ export
         operator float() const
             noexcept
         {
-            return bit_cast<float>(toF32U(repr, Radix));
+            return bit_cast<float>(toF32U<Style>(repr, Radix));
         }
 
         constexpr
         operator double() const
             noexcept
         {
-            return bit_cast<double>(toF64U(repr, Radix));
+            return bit_cast<double>(toF64U<Style>(repr, Radix));
         }
     };
 
-    template <signed_integral Bone, uint8_t Radix> requires (testSize<Bone, Radix+1>&&Radix>0)//reserve 1 bit for sign
+    template <signed_integral Bone, uint8_t Radix,float_round_style Style=round_to_nearest> requires (testSize<Bone, Radix+1>&&Radix>0&&Style>round_indeterminate)//reserve 1 bit for sign
     class fx
     {
         using U = make_unsigned_t<Bone>;
@@ -228,7 +234,7 @@ export
         template <floating_point F>
         constexpr
         explicit fx(F v)
-            noexcept: repr(ufx<U, Radix>(v).repr)
+            noexcept: repr(ufx<U, Radix,Style>(v).repr)
         {
             Bone sign = v < 0;
             repr = (repr ^ -sign) + sign; //negate if <0.
@@ -244,7 +250,7 @@ export
         template <uint8_t P1>
         constexpr
         explicit fx(fx<Bone, P1> o)
-            noexcept: repr(ufx<U, Radix>(bit_cast<ufx<U, P1>>(o)).repr)
+            noexcept: repr(ufx<U, Radix,Style>(bit_cast<ufx<U, P1,Style>>(o)).repr)
         {
         }
 
@@ -255,7 +261,7 @@ export
          *comparing between signed and unsigned of same size is always meaningful arithmetically.
          */
         constexpr
-        strong_ordering operator<=>(ufx<U, Radix> o) const
+        strong_ordering operator<=>(ufx<U, Radix,Style> o) const
             noexcept
         {
             //compiler will optimize if branches out when told to.
@@ -280,7 +286,7 @@ export
             noexcept
         {
             uint32_t sign = repr < 0;
-            uint32_t r = toF32U<U>(quickAbs(repr, sign), Radix);
+            uint32_t r = toF32U<Style,U>(quickAbs(repr, sign), Radix);
             return bit_cast<float>(sign << F32.exponentBits + F32.fractionBits | r);
         }
 
@@ -289,7 +295,7 @@ export
             noexcept
         {
             uint64_t sign = repr < 0;
-            uint64_t r = toF64U<U>(quickAbs(repr, sign), Radix);
+            uint64_t r = toF64U<Style,U>(quickAbs(repr, sign), Radix);
             return bit_cast<double>(sign << F64.exponentBits + F64.fractionBits | r);
         }
     };

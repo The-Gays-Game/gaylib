@@ -1,5 +1,7 @@
 #include<cstdint>
+#include <format>
 #include<iostream>
+#include<limits>
 import fixed;
 void test0()
 {
@@ -9,7 +11,7 @@ void test0()
     std::cout<<"b"<< static_cast<float>(b)<<std::endl;
     fx<int32_t,2>c(0b1,true);
     std::cout<<"c"<< static_cast<float>(c)<<std::endl;
-    fx<int32_t,1>d(0b100000000000000000000000);
+    fx<int32_t,1,std::round_toward_infinity>d(0b1000000000000000000000001,false);
     std::cout<<"d"<< static_cast<float>(d)<<" "<<static_cast<int32_t>(d)<<std::endl;
     float e=static_cast<float>(b);
     fx<int32_t,4>f(e);
@@ -19,6 +21,13 @@ void test0()
     std::cout<<(f==fx<int32_t,4>(g))<<std::endl;
     ufx<uint32_t,3>h(uint32_t(a.repr));
     std::cout<<(h>=a)<<" "<<(a>h)<<std::endl;
+}
+void test3()
+{
+    // int8_t a=-5;
+    // std::cout<<std::format("{:b}",a)<<std::endl;
+    // int8_t b=preRoundTo(a,2,std::round_toward_neg_infinity);
+    // std::cout<<std::format("{:b}",b);
 }
 void test1()
 {
@@ -30,15 +39,17 @@ void test1()
 }
 void test2()
 {
-    int16_t a=-1;
-    int16_t b=a<<2;
-    uint16_t c=uint16_t(a)<<2;
-    int16_t d=-4;
+    uint8_t a=0;
+    uint8_t b=127;
+    uint8_t c=a-b;
+    int8_t d=a-b;
+    auto e=c+d;
     //d<<=1;
-    std::cout<<std::dec<<b<<"; "<<int16_t(c)<<" "<<(d>>1)<<"\n";
+    std::cout<<std::dec<<int16_t(int8_t(c))<<" "<<int16_t(d)<<"\n";
 }
 int main()
 {
-    test0();
+    //test0();
     //test2();
+    test3();
 }
