@@ -2,6 +2,7 @@
 #include <format>
 #include<iostream>
 #include<limits>
+#include<iomanip>
 import fixed;
 void test0()
 {
@@ -11,8 +12,8 @@ void test0()
     std::cout<<"b"<< static_cast<float>(b)<<std::endl;
     fx<int32_t,2>c(0b1,true);
     std::cout<<"c"<< static_cast<float>(c)<<std::endl;
-    fx<int32_t,1,std::round_toward_infinity>d(0b1000000000000000000000001,false);
-    std::cout<<"d"<< static_cast<float>(d)<<" "<<static_cast<int32_t>(d)<<std::endl;
+    fx<int32_t,1,std::round_to_nearest>d(0b1000000000000000000000001,false);
+    std::cout<<"d"<<std::fixed<<std::setprecision(8)<< static_cast<float>(d)<<" "<<static_cast<int32_t>(d)<<std::endl;
     float e=static_cast<float>(b);
     fx<int32_t,4>f(e);
     fx<int64_t,4>g(f);
@@ -49,7 +50,7 @@ void test2()
 }
 int main()
 {
-    //test0();
+    test0();
     //test2();
-    test3();
+    //test3();
 }

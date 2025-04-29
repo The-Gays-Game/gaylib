@@ -8,12 +8,12 @@ module;
 export module fixed;
 using namespace std;
 
-constexpr struct //https://en.wikipedia.org/wiki/Single-precision_floating-point_format#IEEE_754_standard:_binary32
+static constexpr struct //https://en.wikipedia.org/wiki/Single-precision_floating-point_format#IEEE_754_standard:_binary32
 {
     uint8_t exponentBits, fractionBits, exponentBias;
 } F32{8, 23, 127};
 
-constexpr struct F64_CONFIG//https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119983.
+static constexpr struct//https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119983.
     //https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
 {
     uint8_t exponentBits, fractionBits;
@@ -47,30 +47,29 @@ noexcept
             offset=-((1<<digit)-1);
         break;
     default:
-        {}
+        break;
     }
     return v+offset;
 }
-
+#define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 //TODO: support subnormal values.
 template <float_round_style S,unsigned_integral B>
 constexpr
 uint32_t toF32U(B v, uint8_t radix)
     noexcept
 {
-    constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
     uint8_t leading0 = countl_zero(v);
     v <<= leading0; //drop first bit
-    v <<= 1; //when leading0+1==boneSize, undefined.
+    v <<= 1; //when leading0+1==bitSize(B), undefined.
     uint32_t fraction;
-    if constexpr (boneSize >= F32.fractionBits)
+    if constexpr (bitSize(B) >= F32.fractionBits)
     {//keep only first fractionBits bits.
-        uint8_t removed=boneSize - F32.fractionBits;
+        uint8_t removed=bitSize(B) - F32.fractionBits;
         fraction = preRoundTo(v,removed,S) >> removed;
     }
     else //lshift leading bit to fractionBit
-        fraction = U(v) << (F32.fractionBits - boneSize);
-    uint8_t exponent = boneSize - leading0 - radix - 1;
+        fraction = U(v) << (F32.fractionBits - bitSize(B));
+    uint8_t exponent = bitSize(B) - leading0 - radix - 1;
     return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
 }
 
@@ -79,22 +78,21 @@ constexpr
 uint64_t toF64U(B v, uint8_t radix)
     noexcept
 {
-    constexpr uint8_t boneSize = sizeof(B) * CHAR_BIT;
     uint8_t leading0 = countl_zero(v);
     v <<= leading0; //drop first bit
-    v <<= 1; //when leading0+1==boneSize, undefined.
+    v <<= 1; //when leading0+1==bitSize(B), undefined.
     uint64_t fraction;
-    if constexpr (boneSize >= F64.fractionBits)
+    if constexpr (bitSize(B) >= F64.fractionBits)
     {//keep only first fractionBits bits.
-        uint8_t removed=boneSize - F64.fractionBits;
+        uint8_t removed=bitSize(B) - F64.fractionBits;
         fraction = preRountTo(v,removed,S) >> removed;
     }else //lshift leading bit to fractionBit
-        fraction = U(v) << (F64.fractionBits - boneSize);
-    uint8_t exponent = boneSize - leading0 - radix - 1;
+        fraction = U(v) << (F64.fractionBits - bitSize(B));
+    uint8_t exponent = bitSize(B) - leading0 - radix - 1;
     return uint64_t(F64.maskExponent(exponent + F64.exponentBias)) << F64.fractionBits | fraction;
 }
 
-template <class T, uint8_t R> concept testSize = sizeof(T) * CHAR_BIT >= R;
+template <class T, uint8_t R> concept testSize = bitSize(T) >= R;
 /*
  *Design choices:
  *  what operators are explicit:
