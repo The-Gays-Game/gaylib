@@ -23,10 +23,15 @@ void test0()
     ufx<uint32_t,3>h(uint32_t(a.repr));
     std::cout<<(h>=a)<<" "<<(a>h)<<std::endl;
 }
+static int div_round(int a, int b) { return (a ^ b) < 0 ? (a - b / 2) / b : (a + b / 2) / b; }
+
 void test3()
 {
-    fx<int32_t, 3,std::round_to_nearest>a(0.666015625f);
-    std::cout<<std::format("{:b}",a.repr)<<std::endl;
+    // fx<int32_t, 3,std::round_to_nearest>a(0.666015625f);
+    // std::cout<<std::format("{:b}",a.repr)<<std::endl;
+    std::cout<<div_round(1,2)<<std::endl;
+    std::cout<<div_round(2,2)<<std::endl;
+    std::cout<<div_round(5,2)<<" "<<((5 ^ 2) < 0)<<std::endl;
 }
 void test1()
 {

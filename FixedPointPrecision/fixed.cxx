@@ -35,8 +35,10 @@ noexcept
     B offset=0;
     switch (s)
     {
-    case round_to_nearest://ties to even
+    case round_to_nearest:
         offset=1<<digit>>1;
+        //TODO: implement tie to even for both signs.
+
         break;
     case round_toward_infinity:
         if (is_unsigned_v<B>||v>0)
