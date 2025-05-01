@@ -26,16 +26,24 @@ void test0()
 static int div_round(int a, int b)
 {
     auto [q,r]=std::div(a,b);
-    if ((a^b)<0)
+    //when divisor id even, quotient is odd, round half upward.
+    auto special=q&(b&1^1);//(b&1)==0&&(q&1)==1
+    if (a>0&&b>0)//6/4=1%2,10/4=2%2
     {
-        return (a - b / 2) / b;
-    }else
+        return q+(r>b/2-special);//q+(-r<-b/2+special);
+    }else if (a<0&&b<0)//-6/-4=1%-2,-10/-4=2%-2
     {
-        auto[awayq,awayr]=std::div(a+b/2,b);
-        auto special=awayr==0&&((awayq&1)==1)&&((b&1)==0);//awayr==0&&((awayq&1)==1)
-        return awayq-special;
+        return q+(-r>-b/2-special);//q+(r<b/2+special);
+    }else if (a>0&&b<0)//-6/4=-1%-2,-10/4=-2%-2
+    {
+        return q-(-r>b/2-special);//q-(r<-b/2+special);
+    }else//6/-4=-1%2,10/-4=-2%2
+    {
+        return q-(r>-b/2-special);//q-(-r<b/2+special);
     }
 }
+
+
 
 void test3()
 {

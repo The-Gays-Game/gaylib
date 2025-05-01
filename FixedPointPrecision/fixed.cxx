@@ -5,6 +5,7 @@ module;
 #include<limits>
 #include<bit>
 #include<utility>
+#include<cstdlib>
 export module fixed;
 using namespace std;
 
@@ -52,6 +53,51 @@ noexcept
         break;
     }
     return v+offset;
+}
+#define condNeg(v,a) ((v^-a)+a)
+template<float_round_style S,signed_integral B>
+constexpr
+B divr(B a, B b)
+noexcept
+{
+    B q=a/b;
+    if constexpr(S==round_toward_infinity)
+    {
+        B r=a%b;
+        return q+(r!=0&&(a^b)>=0);
+    }else if constexpr(S==round_toward_neg_infinity)
+    {
+        B r=a%b;
+        return q-(r!=0&&(a^b)<0);
+    }else if constexpr(S==round_to_nearest)//tie to even
+    {
+        B r=a%b;
+        B special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
+        return q+condNeg(B(B(abs(r))>B(abs(b))/2-special),q<0);
+    }else
+    {
+        return q;
+    }
+}
+template<float_round_style S,unsigned_integral B>
+constexpr
+B divr(B a,B b)
+noexcept
+{
+    B q=a/b;
+    if constexpr(S==round_toward_infinity)
+    {
+        B r=a%b;
+        return q+(r!=0);
+    }else if constexpr(S==round_to_nearest)//tie to even
+    {
+        B r=a%b;
+        B special=q&(b&1^1);
+        return q+(r>b/2-special);
+    }else
+    {
+        return q;
+    }
 }
 #define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 //TODO: support subnormal values.
@@ -237,7 +283,7 @@ export
             noexcept: repr(ufx<U, Radix,Style>(v).repr)
         {
             Bone sign = v < 0;
-            repr = (repr ^ -sign) + sign; //negate if <0.
+            repr=condNeg(repr,sign);
         }
 
         template <signed_integral B1>
