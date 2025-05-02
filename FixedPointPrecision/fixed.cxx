@@ -33,31 +33,39 @@ constexpr
 B preRoundTo(B v,uint8_t digit,float_round_style s)//make digit the LSB, starting from 0. doesn't remove rounded digits.
 noexcept
 {
-    B offset=0;
+    B a=1<<digit;
     switch (s)
     {
     case round_to_nearest:
-        offset=1<<digit>>1;
-        //TODO: implement tie to even for both signs.
-
-        break;
+        if (is_unsigned_v<B>||v>=0)
+        {
+            B q=v>>digit,r=v&a-1;
+            if (r==(a>>=1)&&(q&1)==0)[[unlikely]]
+                return v;
+            return v+a;
+        }else
+        {
+            B q=v/a,r=v%a;
+            if (-r==(a>>=1)&&(q&1)==0)[[unlikely]]
+                return v;
+            return v-a;
+        }
     case round_toward_infinity:
         if (is_unsigned_v<B>||v>0)
-            offset=(1<<digit)-1;
-        break;
+            return v-1+a;//v+((1<<digit)-1)
+        return v;
     case round_toward_neg_infinity:
         if (is_signed_v<B>&&v<0)
-            offset=-((1<<digit)-1);
-        break;
+            return v+1-a;//v-((1<<digit)-1)
+        return v;
     default:
-        break;
+        return v;
     }
-    return v+offset;
 }
 #define condNeg(v,a) ((v^-a)+a)
 template<float_round_style S,signed_integral B>
 constexpr
-B divr(B a, B b)
+B divr(const B a,const B b)
 noexcept
 {
     B q=a/b;
@@ -73,7 +81,7 @@ noexcept
     {
         B r=a%b;
         B special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-        return q+condNeg(B(B(abs(r))>B(abs(b))/2-special),q<0);
+        return q+condNeg(B(abs(r))>B(abs(b))/2-special,q<0);
     }else
     {
         return q;
@@ -81,7 +89,7 @@ noexcept
 }
 template<float_round_style S,unsigned_integral B>
 constexpr
-B divr(B a,B b)
+B divr(const B a,const B b)
 noexcept
 {
     B q=a/b;

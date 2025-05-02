@@ -47,13 +47,13 @@ static int div_round(int a, int b)
 
 void test3()
 {
-    // fx<int32_t, 3,std::round_to_nearest>a(0.666015625f);
-    // std::cout<<std::format("{:b}",a.repr)<<std::endl;
-    std::cout<<div_round(2,4)<<std::endl;
-    std::cout<<div_round(4,4)<<std::endl;
-    std::cout<<div_round(6,4)<<std::endl;
-    std::cout<<div_round(14,4)<<std::endl;
-    std::cout<<div_round(10,4)<<" "<<((5 ^ 2) < 0)<<std::endl;
+    fx<int32_t, 3,std::round_toward_zero>a(0.666015625f);
+    std::cout<<std::format("{:b}",a.repr)<<std::endl;
+    // uint8_t d=1;
+    // std::cout<<std::format("{:b}",preRoundTo(-7,d,std::round_to_nearest)/(1<<d))<<std::endl;
+    // std::cout<<std::format("{:b}",preRoundTo(-2,d,std::round_to_nearest)/(1<<d))<<std::endl;
+    // std::cout<<std::format("{:b}",preRoundTo(-3,d,std::round_to_nearest)/(1<<d))<<std::endl;
+    // std::cout<<std::format("{:b}",preRoundTo(-5,d,std::round_to_nearest)/(1<<d))<<std::endl;
 }
 void test1()
 {
