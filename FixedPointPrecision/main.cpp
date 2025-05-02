@@ -73,9 +73,15 @@ void test2()
     //d<<=1;
     std::cout<<std::dec<<int16_t(int8_t(c))<<" "<<int16_t(d)<<"\n";
 }
+void test4()
+{
+    fx<int16_t,8,std::round_to_nearest>a(-.0f);
+    std::cout<<std::setprecision(8)<<float(a)<<std::endl;
+}
 int main()
 {
     //test0();
     //test2();
-    test3();
+    //test3();
+    test4();
 }

@@ -109,26 +109,64 @@ noexcept
 }
 #define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 //TODO: support subnormal values.
-template <float_round_style S,unsigned_integral B>
+
+// template <float_round_style S,unsigned_integral B>
+// constexpr
+// uint32_t toF32U(B v, uint8_t radix)
+//     noexcept
+// {
+//     uint8_t leading0 = countl_zero(v);
+//     v <<= leading0;
+//     v <<= 0; //drop first bit when normal;when leading0+1==bitSize(B), undefined.
+//     uint32_t fraction;
+//     if constexpr (bitSize(B) >= F32.fractionBits)
+//     {//keep only first fractionBits bits.
+//         uint8_t removed=bitSize(B) - F32.fractionBits;
+//         fraction = preRoundTo(v,removed,S) >> removed;
+//     }
+//     else //lshift leading bit to fractionBit
+//         fraction = uint32_t(v) << (F32.fractionBits - bitSize(B));
+//     int8_t exponent = bitSize(B) - leading0 - radix - 0;
+//     return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
+// }
+template <uint8_t radix,unsigned_integral B>
 constexpr
-uint32_t toF32U(B v, uint8_t radix)
+float toF32U(B v,float_round_style S)
     noexcept
 {
-    uint8_t leading0 = countl_zero(v);
-    v <<= leading0; //drop first bit
-    v <<= 1; //when leading0+1==bitSize(B), undefined.
-    uint32_t fraction;
-    if constexpr (bitSize(B) >= F32.fractionBits)
-    {//keep only first fractionBits bits.
-        uint8_t removed=bitSize(B) - F32.fractionBits;
-        fraction = preRoundTo(v,removed,S) >> removed;
-    }
-    else //lshift leading bit to fractionBit
-        fraction = U(v) << (F32.fractionBits - bitSize(B));
-    uint8_t exponent = bitSize(B) - leading0 - radix - 1;
-    return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
-}
+    if constexpr(sizeof(B)>3)
+    {
+        uint8_t leading0=countl_zero(v);
+        v<<=leading0& bitSize(B) -1;
 
+        //explicitly round and keep ms 23 or 24 bits.
+        if (radix>=F32.exponentBias&&int8_t(radix-(bitSize(B)-leading0)+1)>=int8_t(F32.exponentBias))//subnormal
+        {
+            uint8_t lsd=bitSize(B)-F32.fractionBits;
+            v=preRoundTo(v,lsd,S)>>lsd;
+            return bit_cast<float>(uint32_t(v));
+        }
+        else
+        {
+            uint8_t lsd=bitSize(B)-(F32.fractionBits+1);
+            v=preRoundTo(v,lsd,S)>>lsd;
+        }
+
+        auto f=bit_cast<uint32_t>(float(v));
+        uint8_t exponent=f>>F32.fractionBits;
+
+    }else
+    {//float can always cover entire range.
+        auto f=bit_cast<uint32_t>(float(v));
+        f-=(radix*(v!=0))<<F32.fractionBits;
+        return bit_cast<float>(f);
+    }
+    uint8_t leading0=countl_zero(v);
+    v<<=leading0& bitSize(B) -1;
+
+
+
+}
 template <float_round_style S,unsigned_integral B>
 constexpr
 uint64_t toF64U(B v, uint8_t radix)
@@ -143,8 +181,8 @@ uint64_t toF64U(B v, uint8_t radix)
         uint8_t removed=bitSize(B) - F64.fractionBits;
         fraction = preRountTo(v,removed,S) >> removed;
     }else //lshift leading bit to fractionBit
-        fraction = U(v) << (F64.fractionBits - bitSize(B));
-    uint8_t exponent = bitSize(B) - leading0 - radix - 1;
+        fraction = uint64_t(v) << (F64.fractionBits - bitSize(B));
+    int8_t exponent = bitSize(B) - leading0 - radix - 1;
     return uint64_t(F64.maskExponent(exponent + F64.exponentBias)) << F64.fractionBits | fraction;
 }
 
