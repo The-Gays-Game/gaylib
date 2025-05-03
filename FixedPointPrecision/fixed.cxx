@@ -198,20 +198,15 @@ noexcept
     using Equiv=uint32_t;
 
     auto a=bit_cast<Equiv>(v);
-    uint8_t more=a>>nl::digits-1;
-    constexpr uint8_t expBias=nl::max_exponent-1;
-    more-=expBias+nl::digits-2;
-    if (int8_t(more)>0)
-    {//if magnitude can't fit within 23 bit int, shrink.
-        a&=~(UINT8_MAX<<nl::digits-1);
-        a|=Equiv(expBias+nl::digits-2)<<nl::digits-1;
-        v=bit_cast<float>(a);
+    int8_t exp=uint8_t(a>>nl::digits-1)-uint8_t(nl::max_exponent-1);
+    if (exp==nl::min_exponent-2)
+    {
+        auto frac=a&((1<<nl::digits-1)-1);
+        uint8_t fracLeading0=countl_zero(frac)-(sizeof(float)*CHAR_BIT-(nl::digits-1));
+        uint8_t moved=min<uint8_t>(fracLeading0,radix);
+
     }
 
-    const float magic=(make_signed_t<Equiv>{1}<<nl::digits-2-radix)*3;//unsigned types generates a jump on GCC
-    a=bit_cast<Equiv>(v+magic)-bit_cast<Equiv>(magic);
-    more=max<int8_t>(more,0);
-    return sizeof(B)>sizeof(Equiv)?B(a)<<more:a<<more;
 }
 /*
  *Design choices:
@@ -355,8 +350,8 @@ export
         explicit fx(F v)
             noexcept: repr(ufx<U, Radix,Style>(v).repr)
         {
-            Bone sign = v < 0;
-            repr=condNeg(repr,sign);
+            // Bone sign = v < 0;
+            // repr=condNeg(repr,sign);
         }
 
         template <signed_integral B1>
