@@ -224,21 +224,23 @@ export
         explicit ufx(float v)
             noexcept
         {
-            auto a = bit_cast<uint32_t>(v);
-            int8_t exponent = uint8_t(a >> F32.fractionBits)/*ignore sign bit*/ - F32.exponentBias;
-            constexpr uint32_t fractionBitsMask = (1 << F32.fractionBits) - 1;
-            uint32_t fraction = (a & fractionBitsMask) | (fractionBitsMask + 1);//add implicit leading 1
-            if (int8_t currentRadix = F32.fractionBits - exponent/*when the shift operators are defined, this won't exceed int8_t's range*/; cmp_greater(currentRadix,Radix)){
-                uint8_t removed=currentRadix - Radix;
-                repr = preRoundTo(fraction,removed,Style) >> removed;
-}
-            else if (cmp_less(currentRadix,Radix))
-            {
-                repr = fraction; //in case sizeof(Bone)>sizeof(float), try to retain more bits as possible.
-                repr <<= Radix - currentRadix;
-            }
-            else
-                repr = fraction;
+            using Equiv=uint32_t;
+
+//             auto a = bit_cast<uint32_t>(v);
+//             int8_t exponent = uint8_t(a >> F32.fractionBits)/*ignore sign bit*/ - F32.exponentBias;
+//             constexpr uint32_t fractionBitsMask = (1 << F32.fractionBits) - 1;
+//             uint32_t fraction = (a & fractionBitsMask) | (fractionBitsMask + 1);//add implicit leading 1
+//             if (int8_t currentRadix = F32.fractionBits - exponent/*when the shift operators are defined, this won't exceed int8_t's range*/; cmp_greater(currentRadix,Radix)){
+//                 uint8_t removed=currentRadix - Radix;
+//                 repr = preRoundTo(fraction,removed,Style) >> removed;
+// }
+//             else if (cmp_less(currentRadix,Radix))
+//             {
+//                 repr = fraction; //in case sizeof(Bone)>sizeof(float), try to retain more bits as possible.
+//                 repr <<= Radix - currentRadix;
+//             }
+//             else
+//                 repr = fraction;
         }
 
         constexpr

@@ -43,15 +43,29 @@ static int div_round(int a, int b)
         return q-(r>-b/2-special);//q-(-r<b/2+special);
     }
 }
-
-void test4()
+static int fcvt(float n,uint8_t b=22)
 {
-    fx<int16_t,5,std::round_to_nearest>a(-.0f);
-    std::cout<<std::setprecision(9)<<float(a)<<std::endl;
-    std::cout<<std::setprecision(17)<<double(a)<<std::endl;
+    const int magic=(1<<b-1)*3;
+    return (std::bit_cast<int>(n+float(magic))&0x007fffff)-0x00400000;
+}
+static uint32_t fcvtu(float n)
+{
+    const int magic=(1<<22)*3;
+    return (std::bit_cast<uint32_t>(n+float(magic))&0x7fffff)-0x400000;
+}
+static int64_t fcvt(double n)
+{
+    const int64_t magic=(int64_t(1)<<51)*3;
+    return (std::bit_cast<int64_t>(n+double(magic))&0xfffffffffffff)-0x8000000000000;
+}
+void test1()
+{
+    float a=0,b=0.5,c=1,d=1.5,e=2,f=2.5;
+    std::cout<<fcvt(a)<<" "<<fcvt(b)<<" "<<fcvt(c)<<" "<<fcvt(d)<<" "<<fcvt(e)<<" "<<fcvt(f)<<std::endl;
+    std::cout<<fcvt(-a)<<" "<<fcvt(-b)<<" "<<fcvt(-c)<<" "<<fcvt(-d)<<" "<<fcvt(-e)<<" "<<fcvt(-f)<<std::endl;
 }
 int main()
 {
-    test0();
-    test4();
+    //test0();
+    test1();
 }
