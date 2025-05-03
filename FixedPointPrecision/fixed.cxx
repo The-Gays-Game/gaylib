@@ -188,6 +188,31 @@ double toF64(B v,uint8_t radix,float_round_style S)
 }
 #define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 template <class T, uint8_t R> concept testSize = bitSize(T) >= R;
+
+template<integral B>
+constexpr
+B fromF32(float v,uint8_t radix)
+noexcept
+{
+    using nl=numeric_limits<float>;
+    using Equiv=uint32_t;
+
+    auto a=bit_cast<Equiv>(v);
+    uint8_t more=a>>nl::digits-1;
+    constexpr uint8_t expBias=nl::max_exponent-1;
+    more-=expBias+nl::digits-2;
+    if (int8_t(more)>0)
+    {//if magnitude can't fit within 23 bit int, shrink.
+        a&=~(UINT8_MAX<<nl::digits-1);
+        a|=Equiv(expBias+nl::digits-2)<<nl::digits-1;
+        v=bit_cast<float>(a);
+    }
+
+    const float magic=(make_signed_t<Equiv>{1}<<nl::digits-2-radix)*3;//unsigned types generates a jump on GCC
+    a=bit_cast<Equiv>(v+magic)-bit_cast<Equiv>(magic);
+    more=max<int8_t>(more,0);
+    return sizeof(B)>sizeof(Equiv)?B(a)<<more:a<<more;
+}
 /*
  *Design choices:
  *  what operators are explicit:
@@ -222,9 +247,8 @@ export
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
         constexpr
         explicit ufx(float v)
-            noexcept
+            noexcept:repr(fromF32<Bone>(v,Radix))
         {
-            using Equiv=uint32_t;
 
 //             auto a = bit_cast<uint32_t>(v);
 //             int8_t exponent = uint8_t(a >> F32.fractionBits)/*ignore sign bit*/ - F32.exponentBias;

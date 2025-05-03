@@ -43,15 +43,17 @@ static int div_round(int a, int b)
         return q-(r>-b/2-special);//q-(-r<b/2+special);
     }
 }
-static int fcvt(float n,uint8_t b=22)
+static int fcvt(float n,uint8_t b=23)
 {
     const int magic=(1<<b-1)*3;
-    return (std::bit_cast<int>(n+float(magic))&0x007fffff)-0x00400000;
+    //&0x007fffff-0x00400000-0x4ac00000-0x4B400000
+    return ((std::bit_cast<int>(n+float(magic))))-std::bit_cast<int>(float(magic));
 }
+
 static uint32_t fcvtu(float n)
 {
     const int magic=(1<<22)*3;
-    return (std::bit_cast<uint32_t>(n+float(magic))&0x7fffff)-0x400000;
+    return (std::bit_cast<uint32_t>(n+float(magic))-0x400000)&0x7fffff;
 }
 static int64_t fcvt(double n)
 {
@@ -60,8 +62,9 @@ static int64_t fcvt(double n)
 }
 void test1()
 {
-    float a=0,b=0.5,c=1,d=1.5,e=2,f=2.5;
-    std::cout<<fcvt(a)<<" "<<fcvt(b)<<" "<<fcvt(c)<<" "<<fcvt(d)<<" "<<fcvt(e)<<" "<<fcvt(f)<<std::endl;
+    const int t=(1<<20)*3;
+    float a=(1<<22)-1,b=0.5,c=1,d=1.5,e=2,f=2.5;
+    std::cout<<std::setprecision(9)<<fcvt(a)<<" "<<fcvt(b)<<" "<<fcvt(c)<<" "<<fcvt(d)<<" "<<fcvt(e)<<" "<<fcvt(f)<<std::endl;
     std::cout<<fcvt(-a)<<" "<<fcvt(-b)<<" "<<fcvt(-c)<<" "<<fcvt(-d)<<" "<<fcvt(-e)<<" "<<fcvt(-f)<<std::endl;
 }
 int main()
