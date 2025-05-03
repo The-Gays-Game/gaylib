@@ -4,24 +4,25 @@
 #include<limits>
 #include<iomanip>
 import fixed;
+template <class Y,class T>
+static void printPair(T a)
+{
+    auto b=Y(a,true),c=Y(-a,true);
+    std::cout<<std::setprecision(9)<<float(b)<<" "<<float(c)<<std::endl;
+}
 void test0()
 {
-    fx<int32_t,3> a(0b1000,true);
-    std::cout<<"a"<< static_cast<float>(a)<<std::endl;
-    fx<int32_t,3>b(0b1100011,true);
-    std::cout<<"b"<< static_cast<float>(b)<<std::endl;
-    fx<int32_t,2>c(0b1,true);
-    std::cout<<"c"<< static_cast<float>(c)<<std::endl;
-    fx<int32_t,1,std::round_to_nearest>d(0b1000000000000000000000001,false);
-    std::cout<<"d"<<std::fixed<<std::setprecision(8)<< static_cast<float>(d)<<" "<<static_cast<int32_t>(d)<<std::endl;
-    float e=static_cast<float>(b);
-    fx<int32_t,4>f(e);
-    fx<int64_t,4>g(f);
-    std::cout<<static_cast<float>(f)<<std::endl;
-    std::cout<<static_cast<float>(g)<<std::endl;
-    std::cout<<(f==fx<int32_t,4>(g))<<std::endl;
-    ufx<uint32_t,3>h(uint32_t(a.repr));
-    std::cout<<(h>=a)<<" "<<(a>h)<<std::endl;
+    std::cout<<"A  ";
+    printPair<fx<int8_t,4>>(0b10010);
+
+    std::cout<<"B  ";
+    printPair<fx<int32_t,11,std::round_toward_neg_infinity>>(1);
+
+    std::cout<<"C  ";
+    printPair<fx<int32_t,1,std::round_toward_neg_infinity>>(0b1111111111111111111111111);
+
+    std::cout<<"D  ";
+    printPair<fx<int32_t,1,std::round_toward_infinity>>((1<<26));
 }
 static int div_round(int a, int b)
 {
@@ -43,45 +44,14 @@ static int div_round(int a, int b)
     }
 }
 
-
-
-void test3()
-{
-    fx<int32_t, 3,std::round_toward_zero>a(0.666015625f);
-    std::cout<<std::format("{:b}",a.repr)<<std::endl;
-    // uint8_t d=1;
-    // std::cout<<std::format("{:b}",preRoundTo(-7,d,std::round_to_nearest)/(1<<d))<<std::endl;
-    // std::cout<<std::format("{:b}",preRoundTo(-2,d,std::round_to_nearest)/(1<<d))<<std::endl;
-    // std::cout<<std::format("{:b}",preRoundTo(-3,d,std::round_to_nearest)/(1<<d))<<std::endl;
-    // std::cout<<std::format("{:b}",preRoundTo(-5,d,std::round_to_nearest)/(1<<d))<<std::endl;
-}
-void test1()
-{
-    //  uint32_t a=1;
-    //  int32_t b=-1;
-    //  auto c=a<=>b;
-    //  std::cout<<(b<a)<<" "<<(b==a)<<" "<<(b>a)<<std::endl;
-    // std::cout<<(c<0)<<" "<<(c==0)<<" "<<(c>0)<<std::endl;
-}
-void test2()
-{
-    uint8_t a=0;
-    uint8_t b=127;
-    uint8_t c=a-b;
-    int8_t d=a-b;
-    auto e=c+d;
-    //d<<=1;
-    std::cout<<std::dec<<int16_t(int8_t(c))<<" "<<int16_t(d)<<"\n";
-}
 void test4()
 {
-    fx<int16_t,8,std::round_to_nearest>a(-.0f);
-    std::cout<<std::setprecision(8)<<float(a)<<std::endl;
+    fx<int16_t,5,std::round_to_nearest>a(-.0f);
+    std::cout<<std::setprecision(9)<<float(a)<<std::endl;
+    std::cout<<std::setprecision(17)<<double(a)<<std::endl;
 }
 int main()
 {
-    //test0();
-    //test2();
-    //test3();
+    test0();
     test4();
 }

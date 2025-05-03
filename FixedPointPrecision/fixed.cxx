@@ -6,6 +6,8 @@ module;
 #include<bit>
 #include<utility>
 #include<cstdlib>
+#include<algorithm>
+#include <float.h>
 export module fixed;
 using namespace std;
 
@@ -107,85 +109,84 @@ noexcept
         return q;
     }
 }
-#define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
-//TODO: support subnormal values.
-
-// template <float_round_style S,unsigned_integral B>
-// constexpr
-// uint32_t toF32U(B v, uint8_t radix)
-//     noexcept
-// {
-//     uint8_t leading0 = countl_zero(v);
-//     v <<= leading0;
-//     v <<= 0; //drop first bit when normal;when leading0+1==bitSize(B), undefined.
-//     uint32_t fraction;
-//     if constexpr (bitSize(B) >= F32.fractionBits)
-//     {//keep only first fractionBits bits.
-//         uint8_t removed=bitSize(B) - F32.fractionBits;
-//         fraction = preRoundTo(v,removed,S) >> removed;
-//     }
-//     else //lshift leading bit to fractionBit
-//         fraction = uint32_t(v) << (F32.fractionBits - bitSize(B));
-//     int8_t exponent = bitSize(B) - leading0 - radix - 0;
-//     return uint8_t(exponent + F32.exponentBias) << F32.fractionBits | fraction;
-// }
-template <uint8_t radix,unsigned_integral B>
+template <integral B>
 constexpr
-float toF32U(B v,float_round_style S)
+float toF32(B v,uint8_t radix,float_round_style S)
     noexcept
 {
+    using nl=numeric_limits<float>;
+    using Equiv=uint32_t;
+
     if constexpr(sizeof(B)>3)
     {
-        uint8_t leading0=countl_zero(v);
-        v<<=leading0& bitSize(B) -1;
+        make_unsigned_t<B> av=is_signed_v<B>?abs(v):v;
+        uint8_t sd=numeric_limits<decltype(av)>::digits-countl_zero(av);
 
-        //explicitly round and keep ms 23 or 24 bits.
-        if (radix>=F32.exponentBias&&int8_t(radix-(bitSize(B)-leading0)+1)>=int8_t(F32.exponentBias))//subnormal
-        {
-            uint8_t lsd=bitSize(B)-F32.fractionBits;
-            v=preRoundTo(v,lsd,S)>>lsd;
-            return bit_cast<float>(uint32_t(v));
-        }
-        else
-        {
-            uint8_t lsd=bitSize(B)-(F32.fractionBits+1);
-            v=preRoundTo(v,lsd,S)>>lsd;
+        if (constexpr uint8_t expBias=nl::max_exponent-1;int8_t(radix-sd+1)>=int8_t(expBias))//subnormal. compilers should be able to remove this branch unless using 128bit int and radix>126
+        {//value is always exact for 128bit int and float there can be at most 2 significant digits.
+            Equiv denorm=av;
+            denorm<<=uint8_t(nl::digits-1)-(radix-sd-(expBias-1));
+            if constexpr(is_signed_v<B>)
+                denorm|=v&~numeric_limits<B>::max();
+            return bit_cast<float>(denorm);
         }
 
-        auto f=bit_cast<uint32_t>(float(v));
-        uint8_t exponent=f>>F32.fractionBits;
+        if (int8_t more=sd-nl::digits;more>0)
+        {
+            v=preRoundTo(v,more,S);
+            v/=B{1}<<more;
+            radix-=more;
+        }
 
+        auto f=bit_cast<Equiv>(float(v));
+        int16_t exponent=uint8_t(f>>nl::digits-1);
+        exponent=clamp<int16_t>(exponent-int8_t(radix),0,UINT8_MAX);
+        f&=~(UINT8_MAX<<nl::digits-1);
+        f|=uint32_t(exponent)<<nl::digits-1;
+        return bit_cast<float>(f);
     }else
     {//float can always cover entire range.
-        auto f=bit_cast<uint32_t>(float(v));
-        f-=(radix*(v!=0))<<F32.fractionBits;
+        auto f=bit_cast<Equiv>(float(v));
+        f-=radix*(v!=0)<<nl::digits-1;
         return bit_cast<float>(f);
     }
-    uint8_t leading0=countl_zero(v);
-    v<<=leading0& bitSize(B) -1;
-
-
 
 }
-template <float_round_style S,unsigned_integral B>
+
+template <integral B>
 constexpr
-uint64_t toF64U(B v, uint8_t radix)
+double toF64(B v,uint8_t radix,float_round_style S)
     noexcept
 {
-    uint8_t leading0 = countl_zero(v);
-    v <<= leading0; //drop first bit
-    v <<= 1; //when leading0+1==bitSize(B), undefined.
-    uint64_t fraction;
-    if constexpr (bitSize(B) >= F64.fractionBits)
-    {//keep only first fractionBits bits.
-        uint8_t removed=bitSize(B) - F64.fractionBits;
-        fraction = preRountTo(v,removed,S) >> removed;
-    }else //lshift leading bit to fractionBit
-        fraction = uint64_t(v) << (F64.fractionBits - bitSize(B));
-    int8_t exponent = bitSize(B) - leading0 - radix - 1;
-    return uint64_t(F64.maskExponent(exponent + F64.exponentBias)) << F64.fractionBits | fraction;
-}
+    using nl=numeric_limits<double>;
+    using Equiv=uint64_t;
 
+    if constexpr(sizeof(B)>6)
+    {
+        uint8_t sd=numeric_limits<make_unsigned_t<B>>::digits-countl_zero(is_signed_v<B>?B(abs(v)):v);
+
+        if (int8_t more=sd-nl::digits;more>0)
+        {
+            v=preRoundTo(v,more,S);
+            v/=B{1}<<more;
+            radix-=more;
+        }
+
+        auto f=bit_cast<Equiv>(double(v));
+        constexpr uint16_t maxExpU=nl::max_exponent-nl::min_exponent+2;
+        int16_t exponent=uint16_t(f>>nl::digits-1)&maxExpU;
+        exponent=clamp<int16_t>(exponent-int8_t(radix),0,maxExpU);
+        f&=~(Equiv(maxExpU)<<nl::digits-1);
+        f|=Equiv(exponent)<<nl::digits-1;
+        return bit_cast<double>(f);
+    }else
+    {
+        auto f=bit_cast<Equiv>(double(v));
+        f-=Equiv(radix*(v!=0))<<nl::digits-1;
+        return bit_cast<double>(f);
+    }
+}
+#define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 template <class T, uint8_t R> concept testSize = bitSize(T) >= R;
 /*
  *Design choices:
@@ -296,14 +297,14 @@ export
         operator float() const
             noexcept
         {
-            return bit_cast<float>(toF32U<Style>(repr, Radix));
+            return toF32(repr,Radix,Style);
         }
 
         constexpr
         operator double() const
             noexcept
         {
-            return bit_cast<double>(toF64U<Style>(repr, Radix));
+            return toF64(repr,Radix,Style);
         }
     };
 
@@ -377,18 +378,14 @@ export
         operator float() const
             noexcept
         {
-            uint32_t sign = repr < 0;
-            uint32_t r = toF32U<Style,U>(quickAbs(repr, sign), Radix);
-            return bit_cast<float>(sign << F32.exponentBits + F32.fractionBits | r);
+            return toF32(repr,Radix,Style);
         }
 
         constexpr
         operator double() const
             noexcept
         {
-            uint64_t sign = repr < 0;
-            uint64_t r = toF64U<Style,U>(quickAbs(repr, sign), Radix);
-            return bit_cast<double>(sign << F64.exponentBits + F64.fractionBits | r);
+            return toF64(repr,Radix,Style);
         }
     };
 }
