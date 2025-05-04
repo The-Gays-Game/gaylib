@@ -189,6 +189,16 @@ double toF64(B v,uint8_t radix,float_round_style S)
 #define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 template <class T, uint8_t R> concept testSize = bitSize(T) >= R;
 
+template<integral B,floating_point F>
+constexpr
+B fromF(F v,uint8_t radix)
+noexcept
+{
+    int exp;
+    frexp(v,&exp);
+    v=ldexp(v,-int(radix)-exp);//curexp=-radix,curexp-exp
+}
+
 template<integral B>
 constexpr
 B fromF32(float v,uint8_t radix)
@@ -196,16 +206,35 @@ noexcept
 {
     using nl=numeric_limits<float>;
     using Equiv=uint32_t;
+    constexpr int8_t maxSubnormExp=nl::min_exponent-2;
+    constexpr uint8_t explicitFracDgts=nl::digits-1,expBias=nl::max_exponent-1;
 
-    auto a=bit_cast<Equiv>(v);
-    int8_t exp=uint8_t(a>>nl::digits-1)-uint8_t(nl::max_exponent-1);
-    if (exp==nl::min_exponent-2)
-    {
-        auto frac=a&((1<<nl::digits-1)-1);
-        uint8_t fracLeading0=countl_zero(frac)-(sizeof(float)*CHAR_BIT-(nl::digits-1));
-        uint8_t moved=min<uint8_t>(fracLeading0,radix);
+    int exp;
+    frexpf(v,&exp);
 
-    }
+    // auto a=bit_cast<Equiv>(v);
+    // int8_t exp=uint8_t(a>>explicitFracDgts)-expBias;
+    // if (nl::has_denorm==denorm_present&&exp==maxSubnormExp)
+    // {
+    //     auto frac=a&(1<<explicitFracDgts)-1;
+    //     uint8_t fracL0=countl_zero(frac)-(sizeof(float)*CHAR_BIT-explicitFracDgts);
+    //     uint8_t currRadix=-maxSubnormExp+fracL0;
+    //     if (currRadix>radix) {
+    //         uint8_t moved=min(currRadix-radix,fracL0+1);
+    //         frac<<=moved;
+    //         radix-=moved;
+    //         if (moved>fracL0) {
+    //             ++exp;
+    //             frac&=(1<<explicitFracDgts)-1;
+    //         }
+    //     }else {//we can't shrink more by playing with exponent.
+    //         uint8_t moved=radix-currRadix;
+    //         frac>>=moved;
+    //         a&=~((1<<explicitFracDgts)-1);
+    //         a|=frac;
+    //         return B(bit_cast<float>(a));
+    //     }
+    // }
 
 }
 /*
