@@ -72,7 +72,7 @@ noexcept
         }
 
         bool subnorm=nl::has_denorm==denorm_present&&int8_t(radix-sd)>=-(nl::min_exponent-1);
-        if (int8_t more=sd-nl::digits;!subnorm&&more>0) {//with radix<=128, sd<=128, then sd<=2 needs no rounding.
+        if (int8_t more=sd-nl::digits;S!=round_indeterminate&&!subnorm&&more>0) {//with radix<=128, sd<=128, then sd<=2 needs no rounding.
             v=divr(v,B{1}<<more,S);
             radix-=more;
             return ldexp(v,-int8_t(radix));
@@ -95,7 +95,7 @@ template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
 export
 {
     //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
-    template <unsigned_integral Bone, uint8_t Radix,float_round_style Style=round_to_nearest> requires(testSize<Bone, Radix>&&Radix>0&&Style>round_indeterminate)//radix==0 is equivalent to int.
+    template <unsigned_integral Bone, uint8_t Radix,float_round_style Style=round_toward_zero> requires testSize<Bone, Radix>//radix==0 is equivalent to int.
     struct ufx
     {
         Bone repr;
@@ -107,8 +107,10 @@ export
         {
             if (!raw)
             {
-                repr<<=1;
-                repr<<=Radix-1;
+                if constexpr(Radix<numeric_limits<Bone>::digits)
+                    repr<<=Radix;
+                else
+                    repr=0;
             }
         }
 
@@ -147,7 +149,9 @@ export
         explicit operator Bone()const
         noexcept
         {
-            return (repr>>1)>>(Radix-1);
+            if constexpr(Radix==numeric_limits<Bone>::digits)
+                return 0;
+            return repr>>Radix;
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -159,7 +163,7 @@ export
         }
     };
 
-    template <signed_integral Bone, uint8_t Radix,float_round_style Style=round_to_nearest> requires (testSize<Bone, Radix+1>&&Radix>0&&Style>round_indeterminate)//reserve 1 bit for sign
+    template <signed_integral Bone, uint8_t Radix,float_round_style Style=round_toward_zero> requires testSize<Bone, Radix>
     class fx
     {
         using U = make_unsigned_t<Bone>;
@@ -218,7 +222,7 @@ export
         explicit operator Bone()const
         noexcept
         {
-            return repr>>Radix;
+            return repr/Bone{1}<<Radix;
         }
 
         template<floating_point F>
