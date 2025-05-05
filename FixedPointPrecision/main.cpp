@@ -29,11 +29,13 @@ void test0()
 
     std::cout<<"D  ";
     printPair<fx<int32_t,1,std::round_toward_zero>>((1<<26));
+    const auto t=1<<26;
 }
 void test2()
 {
     std::cout<<"A  ";
     printPair1<fx<int8_t,4>>(1.125f);
+    printPair1<ufx<uint8_t,4>>(1.125f);
 
     std::cout<<"B  ";
     printPair1<fx<int32_t,11,std::round_toward_neg_infinity>>(0.00048828125f);
@@ -42,7 +44,7 @@ void test2()
     printPair1<fx<int32_t,1,std::round_toward_neg_infinity>>(33554431);
 
     std::cout<<"D  ";//33554432.f
-    printPair1<fx<int32_t,1,std::round_toward_infinity>>(float(1<<21));
+    printPair1<fx<int32_t,1,std::round_toward_infinity>>(float(1<<26));
 }
 static int div_round(int a, int b)
 {
