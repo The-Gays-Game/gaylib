@@ -7,29 +7,10 @@ module;
 #include<utility>
 #include<cstdlib>
 #include<algorithm>
-#include <float.h>
+#include <cmath>
 export module fixed;
 using namespace std;
 
-static constexpr struct //https://en.wikipedia.org/wiki/Single-precision_floating-point_format#IEEE_754_standard:_binary32
-{
-    uint8_t exponentBits, fractionBits, exponentBias;
-} F32{8, 23, 127};
-
-static constexpr struct//https://gcc.gnu.org/bugzilla/show_bug.cgi?id=119983.
-    //https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
-{
-    uint8_t exponentBits, fractionBits;
-    uint16_t exponentBias;
-
-    constexpr
-    uint16_t maskExponent(uint16_t exponent) const
-        noexcept
-    {
-        uint16_t exponentBitsMask = (1 << exponentBits) - 1;
-        return exponent & exponentBitsMask;
-    }
-} F64{11, 52, 1023};
 template<integral B>
 constexpr
 B preRoundTo(B v,uint8_t digit,float_round_style s)//make digit the LSB, starting from 0. doesn't remove rounded digits.
@@ -188,55 +169,6 @@ double toF64(B v,uint8_t radix,float_round_style S)
 }
 #define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
 template <class T, uint8_t R> concept testSize = bitSize(T) >= R;
-
-template<integral B,floating_point F>
-constexpr
-B fromF(F v,uint8_t radix)
-noexcept
-{
-    int exp;
-    frexp(v,&exp);
-    v=ldexp(v,-int(radix)-exp);//curexp=-radix,curexp-exp
-}
-
-template<integral B>
-constexpr
-B fromF32(float v,uint8_t radix)
-noexcept
-{
-    using nl=numeric_limits<float>;
-    using Equiv=uint32_t;
-    constexpr int8_t maxSubnormExp=nl::min_exponent-2;
-    constexpr uint8_t explicitFracDgts=nl::digits-1,expBias=nl::max_exponent-1;
-
-    int exp;
-    frexpf(v,&exp);
-
-    // auto a=bit_cast<Equiv>(v);
-    // int8_t exp=uint8_t(a>>explicitFracDgts)-expBias;
-    // if (nl::has_denorm==denorm_present&&exp==maxSubnormExp)
-    // {
-    //     auto frac=a&(1<<explicitFracDgts)-1;
-    //     uint8_t fracL0=countl_zero(frac)-(sizeof(float)*CHAR_BIT-explicitFracDgts);
-    //     uint8_t currRadix=-maxSubnormExp+fracL0;
-    //     if (currRadix>radix) {
-    //         uint8_t moved=min(currRadix-radix,fracL0+1);
-    //         frac<<=moved;
-    //         radix-=moved;
-    //         if (moved>fracL0) {
-    //             ++exp;
-    //             frac&=(1<<explicitFracDgts)-1;
-    //         }
-    //     }else {//we can't shrink more by playing with exponent.
-    //         uint8_t moved=radix-currRadix;
-    //         frac>>=moved;
-    //         a&=~((1<<explicitFracDgts)-1);
-    //         a|=frac;
-    //         return B(bit_cast<float>(a));
-    //     }
-    // }
-
-}
 /*
  *Design choices:
  *  what operators are explicit:
@@ -269,48 +201,12 @@ export
         }
 
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
+        template<floating_point F>
         constexpr
-        explicit ufx(float v)
-            noexcept:repr(fromF32<Bone>(v,Radix))
+        explicit ufx(F v)
+            noexcept:repr(ldexp(v,Radix))
         {
 
-//             auto a = bit_cast<uint32_t>(v);
-//             int8_t exponent = uint8_t(a >> F32.fractionBits)/*ignore sign bit*/ - F32.exponentBias;
-//             constexpr uint32_t fractionBitsMask = (1 << F32.fractionBits) - 1;
-//             uint32_t fraction = (a & fractionBitsMask) | (fractionBitsMask + 1);//add implicit leading 1
-//             if (int8_t currentRadix = F32.fractionBits - exponent/*when the shift operators are defined, this won't exceed int8_t's range*/; cmp_greater(currentRadix,Radix)){
-//                 uint8_t removed=currentRadix - Radix;
-//                 repr = preRoundTo(fraction,removed,Style) >> removed;
-// }
-//             else if (cmp_less(currentRadix,Radix))
-//             {
-//                 repr = fraction; //in case sizeof(Bone)>sizeof(float), try to retain more bits as possible.
-//                 repr <<= Radix - currentRadix;
-//             }
-//             else
-//                 repr = fraction;
-        }
-
-        constexpr
-        explicit ufx(double v)
-            noexcept
-        {
-            auto a = bit_cast<uint64_t>(v);
-            int16_t exponent = F64.maskExponent(a >> F64.fractionBits) - F64.exponentBias;
-            constexpr uint64_t fractionBitsMask = (uint64_t{1} << F64.fractionBits) - 1;
-            uint64_t fraction = (a & fractionBitsMask) | (fractionBitsMask + 1);
-            if (int16_t currentRadix = F64.fractionBits - exponent; cmp_greater(currentRadix,Radix))
-            {
-                uint8_t removed=currentRadix - Radix;
-                repr = preRoundTo(fraction,removed,Style) >> removed;
-            }
-            else if (cmp_less(currentRadix,Radix))
-            {
-                repr = fraction;
-                repr <<= Radix - currentRadix;
-            }
-            else
-                repr = fraction;
         }
 
         //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
@@ -377,10 +273,8 @@ export
         template <floating_point F>
         constexpr
         explicit fx(F v)
-            noexcept: repr(ufx<U, Radix,Style>(v).repr)
+            noexcept: repr(ldexp(v,Radix))
         {
-            // Bone sign = v < 0;
-            // repr=condNeg(repr,sign);
         }
 
         template <signed_integral B1>
