@@ -1,11 +1,9 @@
 module;
 #include<concepts>
 #include<cstdint>
-#include<climits>
 #include<limits>
 #include<bit>
 #include<utility>
-#include<cstdlib>
 #include<algorithm>
 #include <cmath>
 export module fixed;
@@ -14,46 +12,46 @@ using namespace std;
 #define condNeg(v,a) ((v^-a)+a)
 template<signed_integral B>
 constexpr
-B divr(const B a,const B b,float_round_style S)
+B divr(const B a,const B b,const float_round_style S)
 noexcept
 {
     B q=a/b;
-    if (S==round_toward_infinity)
-    {
-        B r=a%b;
-        return q+(r!=0&&(a^b)>=0);
-    }else if (S==round_toward_neg_infinity)
-    {
-        B r=a%b;
-        return q-(r!=0&&(a^b)<0);
-    }else if (S==round_to_nearest)//tie to even
-    {
-        B r=a%b;
-        B special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-        return q+condNeg(B(abs(r))>B(abs(b))/2-special,q<0);
-    }else
-    {
-        return q;
+    switch (S) {
+        case round_toward_infinity: {
+            B r=a%b;
+            return q+(r!=0&&(a^b)>0);//a^b==0 implies r==0
+        }
+        case round_toward_neg_infinity: {
+            B r=a%b;
+            return q-(r!=0&&(a^b)<0);
+        }
+        case round_to_nearest: {
+            B r=a%b;
+            B special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
+            return q+condNeg(B(abs(r))>(B(abs(b))>>1)-special,q<0);//B(abs(b))/2-special>=0
+        }
+        default:
+            return q;
     }
 }
 template<unsigned_integral B>
 constexpr
-B divr(const B a,const B b,float_round_style S)
+B divr(const B a,const B b,const float_round_style S)
 noexcept
 {
     B q=a/b;
-    if (S==round_toward_infinity)
-    {
-        B r=a%b;
-        return q+(r!=0);
-    }else if (S==round_to_nearest)//tie to even
-    {
-        B r=a%b;
-        B special=q&(b&1^1);
-        return q+(r>b/2-special);
-    }else
-    {
-        return q;
+    switch (S) {
+        case round_toward_infinity: {
+            B r=a%b;
+            return q+(r!=0);
+        }
+        case round_to_nearest: {//tie to even
+            B r=a%b;
+            B special=q&(b&1^1);
+            return q+(r>b/2-special);
+        }
+        default:
+            return q;
     }
 }
 
@@ -82,8 +80,7 @@ noexcept
     }
     return ldexp(v,-int16_t(radix));
 }
-#define bitSize(T) uint8_t(sizeof(T)*CHAR_BIT)
-template <class T, uint8_t R> concept testSize = bitSize(T) >= R;
+template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
 /*
  *Design choices:
  *  what operators are explicit:
