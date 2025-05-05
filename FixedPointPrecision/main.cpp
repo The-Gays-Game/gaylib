@@ -46,6 +46,12 @@ void test2()
     std::cout<<"D  ";//33554432.f
     printPair1<fx<int32_t,1,std::round_toward_infinity>>(float(1<<26));
 }
+void test3() {
+    fx<int16_t,4> a(0b10010,true);
+    std::cout<<"A "<<float(a)<<std::endl;
+    fx<int16_t,2>b(a);
+    std::cout<<"B "<<float(b)<<std::endl;
+}
 static int div_round(int a, int b)
 {
     auto [q,r]=std::div(a,b);
@@ -67,6 +73,5 @@ static int div_round(int a, int b)
 }
 int main()
 {
-    test2();
-    test0();
+    test3();
 }

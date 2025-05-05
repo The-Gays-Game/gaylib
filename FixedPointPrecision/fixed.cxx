@@ -139,8 +139,8 @@ export
         {
             if constexpr (Radix > P1)
                 repr <<= Radix - P1;
-            else
-                repr >>= P1 - Radix;
+            else if constexpr(Radix<P1)
+                repr =divr<Bone>(repr,Bone{1}<<P1 - Radix,Style);
         }
 
         strong_ordering operator<=>(const ufx&) const = default;
@@ -196,8 +196,12 @@ export
         template <uint8_t P1>
         constexpr
         explicit fx(fx<Bone, P1> o)
-            noexcept: repr(ufx<U, Radix,Style>(bit_cast<ufx<U, P1,Style>>(o)).repr)
+            noexcept: repr(o.repr)
         {
+            if constexpr (Radix > P1)
+                repr <<= Radix - P1;
+            else if constexpr (Radix<P1)
+                repr =divr<Bone>(repr,Bone{1}<<P1 - Radix,Style);
         }
 
         strong_ordering operator <=>(const fx&) const = default;
