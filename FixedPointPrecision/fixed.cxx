@@ -22,6 +22,17 @@ using namespace std;
 #endif
 
 #define condNeg(v,a) ((v^-a)+a)
+
+template<unsigned_integral B>
+constexpr
+tuple<B,B> longMul(const B a,const B b)
+noexcept {
+    using nl=numeric_limits<B>;
+    constexpr uint8_t halfWidth=nl::digits/2;
+    constexpr B halfWidthMask=(B{1}<<halfWidth)-1;
+
+}
+
 template<signed_integral B>
 #ifdef INT_ABS_CE
 constexpr
@@ -96,7 +107,7 @@ noexcept(noexcept(ldexp(v,int{})))
     }
     return ldexp(v,-int16_t(radix));
 }
-template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
+
 /*
  *Design choices:
  *  what operators are explicit:
@@ -110,6 +121,7 @@ template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
  */
 export
 {
+    template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
     //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
     template <unsigned_integral Bone, uint8_t Radix,float_round_style Style=round_toward_zero> requires testSize<Bone, Radix>//radix==0 is equivalent to int.
     struct ufx
