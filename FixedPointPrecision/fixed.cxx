@@ -5,17 +5,27 @@ module;
 #include<bit>
 #include<utility>
 #include<algorithm>
+#include<cstdlib>
 #include <cmath>
 export module fixed;
 using namespace std;
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
-#define FP_MANIP_CE constexpr
-#else
+#define CPP23
+#endif
+
+#if defined(CPP23)||defined(__GNUG__)
 #define FP_MANIP_CE
 #endif
+
+#if defined(CPP23)||defined(__GNUG__)
+#define INT_ABS_CE
+#endif
+
 #define condNeg(v,a) ((v^-a)+a)
 template<signed_integral B>
+#ifdef INT_ABS_CE
 constexpr
+#endif
 B divr(const B a,const B b,const float_round_style S)
 noexcept
 {
@@ -32,7 +42,7 @@ noexcept
         case round_to_nearest: {
             B r=a%b;
             B special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-            return q+condNeg(B(abs(r))>(B(abs(b))>>1)-special,q<0);//B(abs(b))/2-special>=0
+            return q+condNeg(B(abs(r))>B(abs(b/2))-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
         }
         default:
             return q;
@@ -60,7 +70,9 @@ noexcept
 }
 
 template<floating_point F,integral B>
-FP_MANIP_CE
+#if defined(FP_MANIP_CE)&&defined(INT_ABS_CE)
+constexpr
+#endif
 F toF(B v,uint8_t radix,float_round_style S)
 noexcept(noexcept(ldexp(v,int{})))
 {
@@ -118,7 +130,9 @@ export
 
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
         template<floating_point F>
-        FP_MANIP_CE
+#ifdef FP_MANIP_CE
+        constexpr
+#endif
         explicit ufx(F v)
             noexcept(noexcept(ldexp(v,int{}))):repr(ldexp(v,Radix))
         {
@@ -158,9 +172,11 @@ export
 
         //conversion to float point is always defined and never lose all precision.
         template<floating_point F>
+#if defined(FP_MANIP_CE)&&defined(INT_ABS_CE)
         constexpr
+#endif
         operator F()const
-        noexcept {
+        noexcept(noexcept(toF<F>(repr,Radix,Style))) {
             return toF<F>(repr,Radix,Style);
         }
     };
@@ -182,7 +198,9 @@ export
         }
 
         template <floating_point F>
-        FP_MANIP_CE
+#ifdef FP_MANIP_CE
+        constexpr
+#endif
         explicit fx(F v)
             noexcept(noexcept(ldexp(v,int{}))): repr(ldexp(v,Radix))
         {
@@ -190,14 +208,16 @@ export
 
         template <signed_integral B1>
         constexpr
-        explicit fx(fx<B1, Radix> o)
+        explicit fx(fx<B1, Radix,Style> o)
             noexcept: repr(o.repr)
         {
         }
 
         template <uint8_t P1>
+#ifdef INT_ABS_CE
         constexpr
-        explicit fx(fx<Bone, P1> o)
+#endif
+        explicit fx(fx<Bone, P1,Style> o)
             noexcept: repr(o.repr)
         {
             if constexpr (Radix > P1)
@@ -236,8 +256,11 @@ export
         }
 
         template<floating_point F>
+#if defined(FP_MANIP_CE)&&defined(INT_ABS_CE)
+        constexpr
+#endif
         operator F()const
-        noexcept {
+        noexcept(noexcept(toF<F>(repr,Radix,Style))) {
             return toF<F>(repr,Radix,Style);
         }
 

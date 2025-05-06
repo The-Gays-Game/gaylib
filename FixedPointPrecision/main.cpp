@@ -73,6 +73,7 @@ static int div_round(int a, int b)
 }
 int main()
 {
-    const fx<int16_t,6> a(1.4f);
-    std::cout<<"A "<<float(a)<<" "<<noexcept(decltype(a)(2.f))<<std::endl;
+    constexpr fx<int16_t,6,std::round_to_nearest> a(1);
+    fx<int16_t,4,std::round_to_nearest>b(a);
+    std::cout<<"A "<<float(b)<<" "<<noexcept(decltype(a)(2.f))<<std::endl;
 }
