@@ -8,7 +8,11 @@ module;
 #include <cmath>
 export module fixed;
 using namespace std;
-
+#if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
+#define FP_MANIP_CE constexpr
+#else
+#define FP_MANIP_CE
+#endif
 #define condNeg(v,a) ((v^-a)+a)
 template<signed_integral B>
 constexpr
@@ -56,9 +60,9 @@ noexcept
 }
 
 template<floating_point F,integral B>
-constexpr
+FP_MANIP_CE
 F toF(B v,uint8_t radix,float_round_style S)
-noexcept
+noexcept(noexcept(ldexp(v,int{})))
 {
     using nl=numeric_limits<F>;
     if constexpr(numeric_limits<B>::digits>nl::digits)
@@ -106,19 +110,17 @@ export
             noexcept: repr(v)
         {
             if (!raw)
-            {
                 if constexpr(Radix<numeric_limits<Bone>::digits)
                     repr<<=Radix;
                 else
                     repr=0;
-            }
         }
 
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
         template<floating_point F>
-        constexpr
+        FP_MANIP_CE
         explicit ufx(F v)
-            noexcept:repr(ldexp(v,Radix))
+            noexcept(noexcept(ldexp(v,int{}))):repr(ldexp(v,Radix))
         {
 
         }
@@ -180,9 +182,9 @@ export
         }
 
         template <floating_point F>
-        constexpr
+        FP_MANIP_CE
         explicit fx(F v)
-            noexcept: repr(ldexp(v,Radix))
+            noexcept(noexcept(ldexp(v,int{}))): repr(ldexp(v,Radix))
         {
         }
 
@@ -200,8 +202,12 @@ export
         {
             if constexpr (Radix > P1)
                 repr <<= Radix - P1;
-            else if constexpr (Radix<P1)
-                repr =divr<Bone>(repr,Bone{1}<<P1 - Radix,Style);
+            else if constexpr (Radix<P1) {
+                if constexpr(Style==round_toward_neg_infinity)
+                    repr>>=P1-Radix;
+                else
+                    repr =divr<Bone>(repr,Bone{1}<<P1 - Radix,Style);
+            }
         }
 
         strong_ordering operator <=>(const fx&) const = default;
