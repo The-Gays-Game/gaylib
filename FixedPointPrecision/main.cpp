@@ -3,6 +3,7 @@
 #include<iostream>
 #include<limits>
 #include<iomanip>
+#include "arithmetic.h"
 import fixed;
 template <class Y,class T>
 static void printPair(T a)
@@ -73,7 +74,9 @@ static int div_round(int a, int b)
 }
 int main()
 {
-    constexpr fx<int16_t,4,std::round_to_nearest> a(1);
-    fx<int16_t,6,std::round_to_nearest>b(a);
-    std::cout<<"A "<<float(b)<<" "<<noexcept(decltype(a)(2.f))<<std::endl;
+    uint8_t a=255,b=255;
+    auto [h,l]=longMul(a,b);
+    uint16_t c0=(uint16_t(h)<<8)|uint16_t(l);
+    uint16_t c1=uint16_t(a)*uint16_t(b);
+    std::cout<<c0<<" "<<c1<<std::endl;
 }

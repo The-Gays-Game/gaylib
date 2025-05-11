@@ -64,12 +64,22 @@ noexcept
     }
 }
 
-// template<unsigned_integral B>
-// constexpr
-// tuple<B,B> longMul(const B a,const B b)
-// noexcept {
-//     using nl=numeric_limits<B>;
-//     constexpr uint8_t halfWidth=nl::digits/2;
-//     constexpr B halfWidthMask=(B{1}<<halfWidth)-1;
-//
-// }
+template<std::unsigned_integral B>
+constexpr
+std::tuple<B,B> longMul(const B a,const B b)
+noexcept {
+    constexpr uint8_t halfWidth=std::numeric_limits<B>::digits/2;
+    constexpr B halfWidthMask=(B{1}<<halfWidth)-1;
+
+    B aL=a&halfWidthMask,aH=a>>halfWidth;
+    B bL=b&halfWidthMask,bH=b>>halfWidth;
+
+    B d=aH*bL+(aL*bL>>halfWidth);
+    B c1=d&halfWidthMask;
+    B c2=d>>halfWidth;
+    c1+=aL*bH;
+
+    B eH=aH*bH+c2+(c1>>halfWidth);
+    B eL=a*b;
+    return {eH,eL};
+}
