@@ -74,9 +74,9 @@ static int div_round(int a, int b)
 }
 int main()
 {
-    int8_t a=-128,b=127;
+    int8_t a=-127,b=127;
     auto [h,l]=longMul(a,b);
-    int16_t c0=(int16_t(h)<<8)+uint16_t(l);
+    int16_t c0=(int16_t(h)<<8)+int16_t(l);
     int16_t c1=int16_t(a)*int16_t(b);
     std::cout<<c0<<" "<<c1<<std::endl;
 }

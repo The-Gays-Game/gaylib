@@ -17,47 +17,47 @@
 
 #define condNeg(v,a) ((v^-a)+a)
 
-template<std::signed_integral B>
+template<std::signed_integral Ts>
 #ifdef INT_ABS_CE
 #define S_DIVR_CE
 constexpr
 #endif
-B divr(const B a,const B b,const std::float_round_style S)
+Ts divr(const Ts a,const Ts b,const std::float_round_style s)
 noexcept
 {
-    B q=a/b;
-    switch (S) {
+    Ts q=a/b;
+    switch (s) {
     case std::round_toward_infinity: {
-            B r=a%b;
+            Ts r=a%b;
             return q+(r!=0&&(a^b)>0);//a^b==0 implies r==0
     }
     case std::round_toward_neg_infinity: {
-            B r=a%b;
+            Ts r=a%b;
             return q-(r!=0&&(a^b)<0);
     }
     case std::round_to_nearest: {
-            B r=a%b;
-            B special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-            return q+condNeg(B(std::abs(r))>B(std::abs(b/2))-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
+            Ts r=a%b;
+            Ts special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
+            return q+condNeg(Ts(std::abs(r))>Ts(std::abs(b/2))-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
     }
     default:
         return q;
     }
 }
-template<std::unsigned_integral B>
+template<std::unsigned_integral Tu>
 constexpr
-B divr(const B a,const B b,const std::float_round_style S)
+Tu divr(const Tu a,const Tu b,const std::float_round_style s)
 noexcept
 {
-    B q=a/b;
-    switch (S) {
+    Tu q=a/b;
+    switch (s) {
     case std::round_toward_infinity: {
-            B r=a%b;
+            Tu r=a%b;
             return q+(r!=0);
     }
     case std::round_to_nearest: {//tie to even
-            B r=a%b;
-            B special=q&(b&1^1);
+            Tu r=a%b;
+            Tu special=q&(b&1^1);
             return q+(r>b/2-special);
     }
     default:
@@ -65,49 +65,25 @@ noexcept
     }
 }
 
-template<std::unsigned_integral B>
+
+template<std::integral T>
 constexpr
-std::tuple<B,B> longMul(const B a,const B b)
-noexcept {
-    constexpr uint8_t halfWidth=std::numeric_limits<B>::digits/2;
-    constexpr B halfWidthMask=(B{1}<<halfWidth)-1;
-
-    B aL=a&halfWidthMask,aH=a>>halfWidth;
-    B bL=b&halfWidthMask,bH=b>>halfWidth;
-
-    B d=aH*bL+((aL*bL)>>halfWidth);
-    B c1=d&halfWidthMask;
-    B c2=d>>halfWidth;
-    c1+=aL*bH;
-
-    B eH=aH*bH+c2+(c1>>halfWidth);
-    B eL=a*b;
-    return {eH,eL};
-}
-
-template<std::signed_integral B>
-constexpr
-std::tuple<B,std::make_unsigned_t<B>> longMul(const B a,const B b)
+std::tuple<T,std::make_unsigned_t<T>> longMul(const T a,const T b)
 noexcept
 {
-    using U=std::make_unsigned_t<B>;
-    constexpr B halfWidth=std::numeric_limits<U>::digits/2;
-    constexpr uint8_t halfWidthDivisor=B{1}<<halfWidth;
-    constexpr B halfWidthMask=halfWidthDivisor-1;
-    //1100000010000000=-16256；10000000=-128，01111111=127
-    //aH*bH=11001000=-56
-    //aH*bL=-8*15=-120=10001000
-    //
-    B aL=a&halfWidthMask,aH=a>>halfWidth;
-    B bL=b&halfWidthMask,bH=b>>halfWidth;
+    using U=std::make_unsigned_t<T>;
+    constexpr T halfWidth=std::numeric_limits<U>::digits/2;
+    constexpr T halfWidthMask=(T{1}<<halfWidth)-1;
 
-    B d=aH*bL+((aL*bL)>>halfWidth);
-    B c1=d&halfWidthMask;
-    B c2=d>>halfWidth;
+    T aL=a&halfWidthMask,aH=a>>halfWidth;
+    T bL=b&halfWidthMask,bH=b>>halfWidth;
+
+    T d=aH*bL+((aL*bL)>>halfWidth);
+    T c1=d&halfWidthMask;
+    T c2=d>>halfWidth;
     c1+=aL*bH;
 
-    B eH=aH*bH+c2+(c1>>halfWidth);
+    T eH=aH*bH+c2+(c1>>halfWidth);
     U eL=U(a)*U(b);
     return {eH,eL};
 }
-//TODO: combine signed and unsigned bc they are the same.
