@@ -1,6 +1,7 @@
 #pragma once
 
 #include<cstdlib>
+#include <semaphore>
 
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
 #define CPP23
@@ -74,7 +75,7 @@ noexcept {
     B aL=a&halfWidthMask,aH=a>>halfWidth;
     B bL=b&halfWidthMask,bH=b>>halfWidth;
 
-    B d=aH*bL+(aL*bL>>halfWidth);
+    B d=aH*bL+((aL*bL)>>halfWidth);
     B c1=d&halfWidthMask;
     B c2=d>>halfWidth;
     c1+=aL*bH;
@@ -83,3 +84,30 @@ noexcept {
     B eL=a*b;
     return {eH,eL};
 }
+
+template<std::signed_integral B>
+constexpr
+std::tuple<B,std::make_unsigned_t<B>> longMul(const B a,const B b)
+noexcept
+{
+    using U=std::make_unsigned_t<B>;
+    constexpr B halfWidth=std::numeric_limits<U>::digits/2;
+    constexpr uint8_t halfWidthDivisor=B{1}<<halfWidth;
+    constexpr B halfWidthMask=halfWidthDivisor-1;
+    //1100000010000000=-16256；10000000=-128，01111111=127
+    //aH*bH=11001000=-56
+    //aH*bL=-8*15=-120=10001000
+    //
+    B aL=a&halfWidthMask,aH=a>>halfWidth;
+    B bL=b&halfWidthMask,bH=b>>halfWidth;
+
+    B d=aH*bL+((aL*bL)>>halfWidth);
+    B c1=d&halfWidthMask;
+    B c2=d>>halfWidth;
+    c1+=aL*bH;
+
+    B eH=aH*bH+c2+(c1>>halfWidth);
+    U eL=U(a)*U(b);
+    return {eH,eL};
+}
+//TODO: combine signed and unsigned bc they are the same.
