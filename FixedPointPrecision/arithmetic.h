@@ -23,7 +23,6 @@ template<std::signed_integral Ts>
 constexpr
 #endif
 Ts divr(const Ts a,const Ts b,const std::float_round_style s)
-noexcept
 {
     Ts q=a/b;
     switch (s) {
@@ -47,7 +46,6 @@ noexcept
 template<std::unsigned_integral Tu>
 constexpr
 Tu divr(const Tu a,const Tu b,const std::float_round_style s)
-noexcept
 {
     Tu q=a/b;
     switch (s) {
@@ -65,7 +63,9 @@ noexcept
     }
 }
 
-
+//auto [q,r]=longMul(a,b);
+//result=q<<width | r
+//basically, q is euclidean quotient of result%max, r is euclidean reminder.
 template<std::integral T>
 constexpr
 std::tuple<T,std::make_unsigned_t<T>> longMul(const T a,const T b)
@@ -86,4 +86,11 @@ noexcept
     T eH=aH*bH+c2+(c1>>halfWidth);
     U eL=U(a)*U(b);
     return {eH,eL};
+}
+
+template<std::unsigned_integral Tu>
+constexpr
+std::tuple<Tu,Tu>  knuth(const std::tuple<Tu,Tu> dividend,const Tu divisor)
+{
+
 }

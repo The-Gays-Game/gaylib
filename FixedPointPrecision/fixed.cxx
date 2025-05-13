@@ -16,7 +16,6 @@ template<floating_point F,integral B>
 constexpr
 #endif
 F toF(B v,uint8_t radix,float_round_style S)
-noexcept(noexcept(ldexp(v,int{})))
 {
     using nl=numeric_limits<F>;
     if constexpr(numeric_limits<B>::digits>nl::digits)
@@ -93,8 +92,7 @@ export
 
         template <uint8_t P1>
         constexpr
-        explicit ufx(ufx<Bone, P1> o)
-            noexcept: repr(o.repr)
+        explicit ufx(ufx<Bone, P1> o): repr(o.repr)
         {
             if constexpr (Radix > P1)
                 repr <<= Radix - P1;
@@ -160,8 +158,7 @@ export
 #ifdef S_DIVR_CE
         constexpr
 #endif
-        explicit fx(fx<Bone, P1,Style> o)
-            noexcept: repr(o.repr)
+        explicit fx(fx<Bone, P1,Style> o): repr(o.repr)
         {
             if constexpr (Radix > P1)
                 repr <<= Radix - P1;
