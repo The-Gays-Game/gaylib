@@ -63,6 +63,19 @@ Tu divr(const Tu a,const Tu b,const std::float_round_style s)
     }
 }
 
+template<std::integral Tfull> struct halfOf{using half=Tfull;};
+#define halfSpec(Tfull,Thalf)template<>struct halfOf<Tfull>{using half=Thalf;};
+halfSpec(uint16_t,uint8_t)
+halfSpec(int16_t,int8_t)
+halfSpec(uint32_t,uint16_t)
+halfSpec(int32_t,int16_t)
+halfSpec(uint64_t,uint32_t)
+halfSpec(int64_t,int32_t)
+#if defined(__GNUG__)||defined(__clang__)
+halfSpec(__uint128_t,uint64_t)
+halfSpec(__int128_t,int64_t)
+#endif
+
 //auto [q,r]=longMul(a,b);
 //result=q<<width | r
 //basically, q is euclidean quotient of result%max, r is euclidean reminder.
@@ -88,9 +101,47 @@ noexcept
     return {eH,eL};
 }
 
-template<std::unsigned_integral Tu>
+template<std::integral Ta>
+struct aint_dw{
+    using Tu=std::make_unsigned_t<Ta>;
+    Ta h;
+    Tu l;
+};
+template<std::integral T>
 constexpr
-std::tuple<Tu,Tu>  knuth(const std::tuple<Tu,Tu> dividend,const Tu divisor)
+aint_dw<T> longLS(const T a,const uint8_t by)
+noexcept
 {
+    return {
+        a>>(std::numeric_limits<typename aint_dw<T>::Tu>::digits-by),
+        typename aint_dw<T>::Tu(a)<<by
+    };
+}
+template<std::unsigned_integral T>
+constexpr
+std::tuple<T,T>  narrow2Div(const aint_dw<T> dividend,const T divisor)
+{
+    constexpr uint8_t halfWidth=std::numeric_limits<T>::digits/2;
 
 }
+/*
+static int div_round(int a, int b)
+{
+    auto [q,r]=std::div(a,b);
+    //when divisor id even, quotient is odd, round half upward.
+    auto special=q&(b&1^1);//(b&1)==0&&(q&1)==1
+    if (a>0&&b>0)//6/4=1%2,10/4=2%2
+    {
+        return q+(r>b/2-special);//q+(-r<-b/2+special);
+    }else if (a<0&&b<0)//-6/-4=1%-2,-10/-4=2%-2
+    {
+        return q+(-r>-b/2-special);//q+(r<b/2+special);
+    }else if (a>0&&b<0)//-6/4=-1%-2,-10/4=-2%-2
+    {
+        return q-(-r>b/2-special);//q-(r<-b/2+special);
+    }else//6/-4=-1%2,10/-4=-2%2
+    {
+        return q-(r>-b/2-special);//q-(-r<b/2+special);
+    }
+}
+*/

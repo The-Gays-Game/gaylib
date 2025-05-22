@@ -53,25 +53,7 @@ void test3() {
     fx<int16_t,2>b(a);
     std::cout<<"B "<<float(b)<<std::endl;
 }
-static int div_round(int a, int b)
-{
-    auto [q,r]=std::div(a,b);
-    //when divisor id even, quotient is odd, round half upward.
-    auto special=q&(b&1^1);//(b&1)==0&&(q&1)==1
-    if (a>0&&b>0)//6/4=1%2,10/4=2%2
-    {
-        return q+(r>b/2-special);//q+(-r<-b/2+special);
-    }else if (a<0&&b<0)//-6/-4=1%-2,-10/-4=2%-2
-    {
-        return q+(-r>-b/2-special);//q+(r<b/2+special);
-    }else if (a>0&&b<0)//-6/4=-1%-2,-10/4=-2%-2
-    {
-        return q-(-r>b/2-special);//q-(r<-b/2+special);
-    }else//6/-4=-1%2,10/-4=-2%2
-    {
-        return q-(r>-b/2-special);//q-(-r<b/2+special);
-    }
-}
+
 int main()
 {
     int8_t a=-127,b=127;
@@ -79,4 +61,10 @@ int main()
     int16_t c0=(int16_t(h)<<8)+int16_t(l);
     int16_t c1=int16_t(a)*int16_t(b);
     std::cout<<c0<<" "<<c1<<std::endl;
+
+    int16_t dh=-1,e=8,f=0;
+    uint16_t dl=-16;
+    int16_t g0=divllu(dh,dl,e,&f);
+    int16_t g1=((int32_t{dh}<<16)|dl)/int32_t{e};
+    std::cout<<g0<<" "<<g1<<std::endl;
 }
