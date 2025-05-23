@@ -1,7 +1,6 @@
 #pragma once
 
 #include<cstdlib>
-#include <semaphore>
 
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
     #define CPP23
@@ -103,40 +102,15 @@ template<>struct rankOf<__uint128_t>{using half=uint64_t;};
 template<>struct rankOf<__int128_t>{using half=int64_t;};
 #endif
 
-
-
-
-//auto [q,r]=longMul(a,b);
-//result=q<<width | r
-//basically, q is euclidean quotient of result%max, r is euclidean reminder.
-template<std::integral T>
-constexpr
-std::tuple<T,std::make_unsigned_t<T>> longMul(const T a,const T b)
-noexcept
-{
-    using U=std::make_unsigned_t<T>;
-    constexpr T halfWidth=std::numeric_limits<U>::digits/2;
-    constexpr T halfWidthMask=(T{1}<<halfWidth)-1;
-
-    T aL=a&halfWidthMask,aH=a>>halfWidth;
-    T bL=b&halfWidthMask,bH=b>>halfWidth;
-
-    T d=aH*bL+((aL*bL)>>halfWidth);
-    T c1=d&halfWidthMask;
-    T c2=d>>halfWidth;
-    c1+=aL*bH;
-
-    T eH=aH*bH+c2+(c1>>halfWidth);
-    U eL=U(a)*U(b);
-    return {eH,eL};
-}
-
 template<std::integral Ta>
 struct aint_dw{
     using Tu=std::make_unsigned_t<Ta>;
     Ta h;
     Tu l;
     aint_dw()=default;
+    constexpr
+    aint_dw(const Ta h,const Tu l)
+    noexcept:h(h),l(l){}
     template<std::integral V>requires std::is_same_v<typename rankOf<Ta>::two,V>
     constexpr
     explicit aint_dw(V v)
@@ -154,10 +128,35 @@ struct aint_dw{
 
 template<std::integral T>
 constexpr
+aint_dw<T> wideMul(const T a,const T b)
+noexcept
+{
+    using Tu=typename aint_dw<T>::Tu;
+    using Th=typename rankOf<Tu>::half;
+    constexpr T halfWidth=std::numeric_limits<Th>::digits;
+
+    T aL=Th(a),aH=a>>halfWidth;
+    T bL=Th(b),bH=b>>halfWidth;
+
+    T d=aH*bL+((aL*bL)>>halfWidth);
+    T c1=Th(d);
+    T c2=d>>halfWidth;
+    c1+=aL*bH;
+
+    T eH=aH*bH+c2+(c1>>halfWidth);
+    Tu eL=Tu(a)*b;
+    return {eH,eL};
+}
+
+template<std::integral T>
+constexpr
 aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
 noexcept
 {
-#if __has_builtin(__builtin_assume)
+#ifdef debug_arithmetic
+    if (by==0)
+        throw std::domain_error("can't shift by 0");
+#elif __has_builtin(__builtin_assume)
     __builtin_assume(by>0);
 #endif
     using Tu=typename aint_dw<T>::Tu;
@@ -170,7 +169,12 @@ template<std::unsigned_integral T>
 constexpr
 std::tuple<T,T>  narrow2Div(const aint_dw<T>/*.h >0*/ dividend,const T/*assume normalized*/ divisor)
 {
-#if __has_builtin(__builtin_assume)
+#ifdef debug_arithmetic
+    if (std::countl_zero(divisor))
+        throw std::domain_error("unnormalized divisor");
+    if (!dividend.h)
+        throw std::domain_error("dividend.h==0");
+#elif __has_builtin(__builtin_assume)
     __builtin_assume(std::countl_zero(divisor)==0&&dividend.h>0);
 #endif
     using Th=typename rankOf<T>::half;
@@ -190,7 +194,7 @@ std::tuple<T,T>  narrow2Div(const aint_dw<T>/*.h >0*/ dividend,const T/*assume n
     qhat=r/divisorSplit.h,rhat=r%divisorSplit.h;
     c1=qhat*divisorSplit.l,c2=rhat<<halfWidth|dividendLSplit.l;
     if (c1>c2)
-        qhat-=(c1-c2>divisor)?2:1;
+        qhat-=c1-c2>divisor?2:1;
     q.l=qhat;
 
     r=(r<<halfWidth|dividendLSplit.l)-q.l*divisor;

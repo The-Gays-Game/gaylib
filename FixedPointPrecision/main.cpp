@@ -3,6 +3,7 @@
 #include<iostream>
 #include<limits>
 #include<iomanip>
+#define debug_arithmetic
 #include "arithmetic.h"
 import fixed;
 template <class Y,class T>
@@ -56,10 +57,10 @@ void test3() {
 
 int main()
 {
-    int8_t a=-127,b=127;
-    auto [h,l]=longMul(a,b);
-    int16_t c0=(int16_t(h)<<8)+int16_t(l);
-    int16_t c1=int16_t(a)*int16_t(b);
+    int16_t a=3000,b=INT16_MIN;
+    auto x=wideMul(a,b);
+    int32_t c0=x.merge();
+    int32_t c1=int32_t(a)*int32_t(b);
     std::cout<<c0<<" "<<c1<<std::endl;
 
     constexpr uint32_t d=403890;
