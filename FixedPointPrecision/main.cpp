@@ -62,9 +62,11 @@ int main()
     int16_t c1=int16_t(a)*int16_t(b);
     std::cout<<c0<<" "<<c1<<std::endl;
 
-    int16_t dh=-1,e=8,f=0;
-    uint16_t dl=-16;
-    int16_t g0=divllu(dh,dl,e,&f);
-    int16_t g1=((int32_t{dh}<<16)|dl)/int32_t{e};
+    constexpr uint32_t d=403890;
+    constexpr uint16_t e=0x8100,f=0;
+    constexpr auto t=narrow2Div<uint16_t>(aint_dw<uint16_t>(d),e);
+    uint16_t g1=d/uint32_t{e},r1=d%e;
+    auto [g0,r0]=t;
     std::cout<<g0<<" "<<g1<<std::endl;
+    std::cout<<r0<<" "<<r1<<std::endl;
 }

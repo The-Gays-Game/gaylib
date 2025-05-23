@@ -4,22 +4,35 @@
 #include <semaphore>
 
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
-#define CPP23
+    #define CPP23
+#endif
+
+#ifndef __has_builtin
+    #define __has_builtin(x) 0
+#endif
+
+#ifndef __has_constexpr_builtin
+    #define __has_constexpr_builtin(x) 0
 #endif
 
 #if defined(CPP23)||defined(__GNUG__)
-#define FP_MANIP_CE
+    #define FP_MANIP_CE
 #endif
 
 #if defined(CPP23)||defined(__GNUG__)
-#define INT_ABS_CE
+    #define INT_ABS_CE
 #endif
 
-#define condNeg(v,a) ((v^-a)+a)
-
+template <std::integral T>
+constexpr
+T condNeg(const T v,const bool a)
+noexcept
+{
+    return (v^-T{a})+a;
+}
 template<std::signed_integral Ts>
 #ifdef INT_ABS_CE
-#define S_DIVR_CE
+    #define S_DIVR_CE
 constexpr
 #endif
 Ts divr(const Ts a,const Ts b,const std::float_round_style s)
@@ -37,7 +50,7 @@ Ts divr(const Ts a,const Ts b,const std::float_round_style s)
     case std::round_to_nearest: {
             Ts r=a%b;
             Ts special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-            return q+condNeg(Ts(std::abs(r))>Ts(std::abs(b/2))-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
+            return q+condNeg<Ts>(std::abs(r)>std::abs(b/2)-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
     }
     default:
         return q;
@@ -63,18 +76,35 @@ Tu divr(const Tu a,const Tu b,const std::float_round_style s)
     }
 }
 
-template<std::integral Tfull> struct halfOf{using half=Tfull;};
-#define halfSpec(Tfull,Thalf)template<>struct halfOf<Tfull>{using half=Thalf;};
-halfSpec(uint16_t,uint8_t)
-halfSpec(int16_t,int8_t)
-halfSpec(uint32_t,uint16_t)
-halfSpec(int32_t,int16_t)
-halfSpec(uint64_t,uint32_t)
-halfSpec(int64_t,int32_t)
+template<std::integral> struct rankOf{};
+
+template<>struct rankOf<uint8_t>{using two=uint16_t;};
+template<>struct rankOf<int8_t>{using two=int16_t;};
+
+template<>struct rankOf<uint16_t>{using half=uint8_t;using two=uint32_t;};
+template<>struct rankOf<int16_t>{using half=int8_t;using two=int32_t;};
+
+template<>struct rankOf<uint32_t>{using half=uint16_t;using two=uint64_t;};
+template<>struct rankOf<int32_t>{using half=int16_t;using two=int64_t;};
+
+template<>struct rankOf<uint64_t>{using half=uint32_t;
 #if defined(__GNUG__)||defined(__clang__)
-halfSpec(__uint128_t,uint64_t)
-halfSpec(__int128_t,int64_t)
+    using two=__uint128_t;
 #endif
+};
+template<>struct rankOf<int64_t>{using half=int32_t;
+#if defined(__GNUG__)||defined(__clang__)
+    using two=__int128_t;
+#endif
+};
+
+#if defined(__GNUG__)||defined(__clang__)
+template<>struct rankOf<__uint128_t>{using half=uint64_t;};
+template<>struct rankOf<__int128_t>{using half=int64_t;};
+#endif
+
+
+
 
 //auto [q,r]=longMul(a,b);
 //result=q<<width | r
@@ -106,23 +136,66 @@ struct aint_dw{
     using Tu=std::make_unsigned_t<Ta>;
     Ta h;
     Tu l;
+    aint_dw()=default;
+    template<std::integral V>requires std::is_same_v<typename rankOf<Ta>::two,V>
+    constexpr
+    explicit aint_dw(V v)
+    noexcept:h(v>>std::numeric_limits<Tu>::digits),l(v)
+    {
+    }
+    constexpr
+    typename rankOf<Ta>::two merge()const
+    noexcept
+    {
+        constexpr uint8_t width=std::numeric_limits<Tu>::digits;
+        return typename rankOf<Ta>::two(h)<<width|l;
+    }
 };
+
 template<std::integral T>
 constexpr
-aint_dw<T> longLS(const T a,const uint8_t by)
+aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
 noexcept
 {
-    return {
-        a>>(std::numeric_limits<typename aint_dw<T>::Tu>::digits-by),
-        typename aint_dw<T>::Tu(a)<<by
-    };
+#if __has_builtin(__builtin_assume)
+    __builtin_assume(by>0);
+#endif
+    using Tu=typename aint_dw<T>::Tu;
+    T h=a>>std::numeric_limits<Tu>::digits-by;
+    Tu l=Tu(a)<<by-1;
+    l<<=1;
+    return {h,l};
 }
 template<std::unsigned_integral T>
 constexpr
-std::tuple<T,T>  narrow2Div(const aint_dw<T> dividend,const T divisor)
+std::tuple<T,T>  narrow2Div(const aint_dw<T>/*.h >0*/ dividend,const T/*assume normalized*/ divisor)
 {
-    constexpr uint8_t halfWidth=std::numeric_limits<T>::digits/2;
+#if __has_builtin(__builtin_assume)
+    __builtin_assume(std::countl_zero(divisor)==0&&dividend.h>0);
+#endif
+    using Th=typename rankOf<T>::half;
+    constexpr uint8_t halfWidth=std::numeric_limits<Th>::digits;
 
+    const aint_dw<Th> divisorSplit(divisor),dividendLSplit(dividend.l);
+    aint_dw<Th> q;
+
+    T qhat=dividend.h/divisorSplit.h,rhat=dividend.h%divisorSplit.h;
+    T c1=qhat*divisorSplit.l,c2=rhat<<halfWidth|dividendLSplit.h;
+    if (c1>c2)
+        qhat-=c1-c2>divisor?2:1;
+    q.h=qhat;
+
+    T r=(dividend.h<<halfWidth|dividendLSplit.h)-q.h*divisor;
+
+    qhat=r/divisorSplit.h,rhat=r%divisorSplit.h;
+    c1=qhat*divisorSplit.l,c2=rhat<<halfWidth|dividendLSplit.l;
+    if (c1>c2)
+        qhat-=(c1-c2>divisor)?2:1;
+    q.l=qhat;
+
+    r=(r<<halfWidth|dividendLSplit.l)-q.l*divisor;
+
+    return {q.merge(),r};
 }
 /*
 static int div_round(int a, int b)
