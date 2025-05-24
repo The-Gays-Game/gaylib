@@ -50,6 +50,7 @@ noexcept(noexcept(ldexp(v,int{})))
  *      uses explicit operators.
  *      completely replaced by stl or builtin features.
  */
+template<class T>concept wider=requires{typename rankOf<T>::two;};
 export
 {
     template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
@@ -78,9 +79,7 @@ export
 #endif
         explicit ufx(F v)
             noexcept(noexcept(ldexp(v,int{}))):repr(ldexp(v,Radix))
-        {
-
-        }
+        {}
 
         //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
 
@@ -121,6 +120,24 @@ export
         operator F()const
         noexcept(noexcept(toF<F>(repr,Radix,Style))) {
             return toF<F>(repr,Radix,Style);
+        }
+
+        constexpr
+        ufx operator/(ufx divisor)const
+        {
+            if constexpr(requires{typename rankOf<Bone>::two;})
+            {
+                typename rankOf<Bone>::two dividend=repr;
+                dividend<<=Radix;
+                return ufx(divr<Bone>(dividend,divisor.repr,Style),true);
+            }else
+            {
+                uint8_t shift=countl_zero(divisor.repr);
+                divisor.repr<<=shift;
+                aint_dw<Bone> dividend=wideLS(repr,shift+Radix);
+                auto [q,r]=uNarrow211Div(dividend,divisor.repr);
+                return ufx(uround(q,r,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+            }
         }
     };
 

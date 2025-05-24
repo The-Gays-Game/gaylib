@@ -1,7 +1,10 @@
 #pragma once
 
 #include<cstdlib>
-
+//#define debug_arithmetic //declaring it here to avoid gcc bug.
+#ifdef debug_arithmetic
+#include<stdexcept>
+#endif
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
     #define CPP23
 #endif
@@ -55,22 +58,22 @@ template<std::signed_integral Ts>
     #define S_DIVR_CE
 constexpr
 #endif
-Ts divr(const Ts a,const Ts b,const std::float_round_style s)
+Ts divr(const Ts dividend,const Ts divisor,const std::float_round_style s)
 {
-    Ts q=a/b;
+    Ts q=dividend/divisor;
     switch (s) {
     case std::round_toward_infinity: {
-            Ts r=a%b;
-            return q+(r!=0&&(a^b)>0);//a^b==0 implies r==0
+            Ts r=dividend%divisor;
+            return q+(r!=0&&(dividend^divisor)>0);//a^b==0 implies r==0
     }
     case std::round_toward_neg_infinity: {
-            Ts r=a%b;
-            return q-(r!=0&&(a^b)<0);
+            Ts r=dividend%divisor;
+            return q-(r!=0&&(dividend^divisor)<0);
     }
     case std::round_to_nearest: {
-            Ts r=a%b;
-            Ts special=q&(b&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-            return q+condNeg<Ts>(std::abs(r)>std::abs(b/2)-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
+            Ts r=dividend%divisor;
+            Ts special=q&(divisor&1^1);//round up tie when odd quotient even divisor. round down tie when even quotient and divisor
+            return q+condNeg<Ts>(std::abs(r)>std::abs(divisor/2)-special,q<0);//B(abs(b))/2-special>=0;r and b/2 will never overflow after abs.
     }
     default:
         return q;
@@ -78,22 +81,26 @@ Ts divr(const Ts a,const Ts b,const std::float_round_style s)
 }
 template<std::unsigned_integral Tu>
 constexpr
-Tu divr(const Tu a,const Tu b,const std::float_round_style s)
+Tu uround(const Tu q, const Tu r,const Tu divisor,const std::float_round_style s)
+noexcept
 {
-    Tu q=a/b;
     switch (s) {
     case std::round_toward_infinity: {
-            Tu r=a%b;
             return q+(r!=0);
     }
     case std::round_to_nearest: {//tie to even
-            Tu r=a%b;
-            Tu special=q&(b&1^1);
-            return q+(r>b/2-special);
+            Tu special=q&(divisor&1^1);
+            return q+(r>(divisor>>1)-special);
     }
     default:
         return q;
     }
+}
+template<std::unsigned_integral Tu>
+constexpr
+Tu divr(const Tu dividend,const Tu divisor,const std::float_round_style s)
+{
+    return uround<Tu>(dividend/divisor,dividend%divisor,divisor,s);
 }
 
 template<std::integral> struct rankOf{};
@@ -146,7 +153,7 @@ struct aint_dw{
         return typename rankOf<Ta>::two(h)<<width|l;
     }
     constexpr
-    aint_dw& operator +=(const Ta b)
+    aint_dw& operator +=(const Tu b)//this function assumes Tu,Ta are the only things we know.
     noexcept
     {
         Tu co;
@@ -164,23 +171,14 @@ struct aint_dw{
             this->l=__builtin_addcll(this->l,b,0,&co);
         else
             done=false;
-#elifdef __GNUG__
-        if constexpr(sizeof(Ta)<=sizeof(unsigned int))
-        {
-            unsigned int co1;
-            this->l=__builtin_addc(this->l,b,0,&co1);
-            co=co1;
-        }else if constexpr(sizeof(Ta)<=sizeof(unsigned long int))
-        {
-            unsigned long int co1;
-            this->l=__builtin_addcl(this->l,b,0,&co1);
-            co=co1;
-        }else if constexpr(sizeof(Ta)<=sizeof(unsigned long long))
-        {
-            unsigned long long int co1;
-            this->l=__builtin_addcll(this->l,b,0,&co1);
-            co=co1;
-        }else
+#elif defined(__GNUG__)
+        if constexpr(std::is_same_v<Tu,unsigned int>)
+            this->l=__builtin_addc(this->l,b,0,&co);
+        else if constexpr(std::is_same_v<Tu,unsigned long int>)
+            this->l=__builtin_addcl(this->l,b,0,&co);
+        else if constexpr(std::is_same_v<Tu,unsigned long long int>)
+            this->l=__builtin_addcll(this->l,b,0,&co);
+        else
             done=false;
 #endif
         if (!done)
@@ -237,7 +235,7 @@ noexcept
 }
 template<std::unsigned_integral T>
 constexpr
-std::tuple<T,T>  narrow2Div(const aint_dw<T> dividend,const T/*assume normalized*/ divisor)
+std::tuple<T,T>  uNarrow211Div(const aint_dw<T> dividend,const T/*assume normalized*/ divisor)
 {
 #ifdef debug_arithmetic
     if (std::countl_zero(divisor))
@@ -245,7 +243,7 @@ std::tuple<T,T>  narrow2Div(const aint_dw<T> dividend,const T/*assume normalized
     if (dividend.h>=divisor)
         throw std::domain_error("q can't fit in 1 part");
 #elif __has_builtin(__builtin_assume)
-    __builtin_assume(std::countl_zero(divisor)==0&&dividend.h<divisor);
+    __builtin_assume(__builtin_clzg(divisor)==0&&dividend.h<divisor);
 #endif
     using Th=typename rankOf<T>::half;
     constexpr uint8_t halfWidth=std::numeric_limits<Th>::digits;
@@ -277,6 +275,23 @@ std::tuple<T,T>  narrow2Div(const aint_dw<T> dividend,const T/*assume normalized
 
     return {q.merge(),r};
 }
+template<std::unsigned_integral T>
+constexpr
+std::tuple<aint_dw<T>,T> u212Div(const aint_dw<T> dividend,const T/*should be normalized for uNarrow211Div*/ divisor)
+{
+#ifdef debug_arithmetic
+    if (divisor==0)
+        throw std::domain_error("0 divisor");
+#endif
+    aint_dw<T> q;
+    q.h=dividend.h/divisor;
+    T r=dividend.h%divisor;
+
+    auto a=uNarrow211Div(aint_dw<T> (r,dividend.l),divisor);
+    q.l=std::get<0>(a),r=std::get<1>(a);
+    return {q,r};
+}
+
 template <std::signed_integral Ts>
 constexpr
 std::make_unsigned_t<Ts> uabs(const Ts a)

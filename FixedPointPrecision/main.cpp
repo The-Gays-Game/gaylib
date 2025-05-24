@@ -16,7 +16,7 @@ void test4()
 
     constexpr uint32_t d=0x9ffff;
     constexpr uint16_t e=0x8001,f=0;
-    constexpr auto t=narrow2Div<uint16_t>(aint_dw<uint16_t>(d),e);
+    constexpr auto t=uNarrow211Div<uint16_t>(aint_dw<uint16_t>(d),e);
     uint16_t g1=d/uint32_t{e},r1=d%e;
     auto [g0,r0]=t;
     std::cout<<g0<<" "<<g1<<std::endl;
@@ -25,5 +25,6 @@ void test4()
 
 int main()
 {
-    test4();
+    ufx<uint16_t,0,std::round_to_nearest>a(0xffff),b(2);
+    std::cout<<double(a/b)<<" "<<(double(a)/double(b))<<std::endl;
 }
