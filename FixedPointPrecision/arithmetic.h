@@ -64,11 +64,11 @@ Ts divr(const Ts dividend,const Ts divisor,const std::float_round_style s)
     switch (s) {
     case std::round_toward_infinity: {
             Ts r=dividend%divisor;
-            return q+(r!=0&&(dividend^divisor)>0);//a^b==0 implies r==0
+            return q+(r!=0&&q>=0);//a^b==0 implies r==0
     }
     case std::round_toward_neg_infinity: {
             Ts r=dividend%divisor;
-            return q-(r!=0&&(dividend^divisor)<0);
+            return q-(r!=0&&q<=0);
     }
     case std::round_to_nearest: {
             Ts r=dividend%divisor;
@@ -298,6 +298,6 @@ std::make_unsigned_t<Ts> uabs(const Ts a)
 noexcept
 {
     using Tu=std::make_unsigned_t<Ts>;
-    const bool flag=a<0;
-    return Tu{a}+flag^flag;
+    const Tu flag=a>>std::numeric_limits<Ts>::digits;
+    return Tu(a)+flag^flag;
 }

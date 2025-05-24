@@ -129,7 +129,7 @@ export
             {
                 typename rankOf<Bone>::two dividend=repr;
                 dividend<<=Radix;
-                return ufx(divr<Bone>(dividend,divisor.repr,Style),true);
+                return ufx(divr<decltype(dividend)>(dividend,divisor.repr,Style),true);
             }else
             {
                 uint8_t shift=countl_zero(divisor.repr);
@@ -163,15 +163,13 @@ export
 #endif
         explicit fx(F v)
             noexcept(noexcept(ldexp(v,int{}))): repr(ldexp(v,Radix))
-        {
-        }
+        {}
 
         template <signed_integral B1>
         constexpr
         explicit fx(fx<B1, Radix,Style> o)
             noexcept: repr(o.repr)
-        {
-        }
+        {}
 
         template <uint8_t P1>
 #ifdef S_DIVR_CE
@@ -224,5 +222,33 @@ export
             return toF<F>(repr,Radix,Style);
         }
 
+        constexpr
+        fx operator/(fx divisor)const
+        {
+            if constexpr(requires{typename rankOf<Bone>::two;})
+            {
+                typename rankOf<Bone>::two dividend=repr;
+                dividend<<=Radix;
+                return fx(divr<decltype(dividend)>(dividend,divisor.repr,Style),true);
+            }else
+            {
+                U absDivisor=uabs(divisor.repr);
+                uint8_t shift=countl_zero(absDivisor);
+                absDivisor<<=shift;
+                aint_dw<U> absDividend=wideLS(uabs(repr),shift+Radix);
+                auto [absQ,absR]=uNarrow211Div(absDividend,absDivisor);
+                Bone qSign=repr^divisor.repr;
+                if constexpr(Style==round_toward_infinity)
+                    absQ+=absR!=0&&qSign>0;
+                else if constexpr(Style==round_toward_neg_infinity)
+                    absQ-=absR!=0&&qSign<0;
+                else if constexpr(Style==round_to_nearest)
+                {
+                    U special=absQ&(divisor.repr&1^1);
+                    absQ+=absR>(absDivisor>>1)-special;
+                }
+                return fx(condNeg(absQ,qSign<0),true);
+            }
+        }
     };
 }

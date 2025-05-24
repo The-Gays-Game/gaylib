@@ -25,6 +25,6 @@ void test4()
 
 int main()
 {
-    ufx<uint16_t,0,std::round_to_nearest>a(0xffff),b(2);
+    fx<int16_t,8,std::round_to_nearest>a(32),b(-0.5);
     std::cout<<double(a/b)<<" "<<(double(a)/double(b))<<std::endl;
 }
