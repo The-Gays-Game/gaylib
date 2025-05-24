@@ -29,6 +29,27 @@ noexcept
 {
     return (v^-T{a})+a;
 }
+/*
+static int div_round(int a, int b)
+{
+    auto [q,r]=std::div(a,b);
+    //when divisor id even, quotient is odd, round half upward.
+    auto special=q&(b&1^1);//(b&1)==0&&(q&1)==1
+    if (a>0&&b>0)//6/4=1%2,10/4=2%2
+    {
+        return q+(r>b/2-special);//q+(-r<-b/2+special);
+    }else if (a<0&&b<0)//-6/-4=1%-2,-10/-4=2%-2
+    {
+        return q+(-r>-b/2-special);//q+(r<b/2+special);
+    }else if (a>0&&b<0)//-6/4=-1%-2,-10/4=-2%-2
+    {
+        return q-(-r>b/2-special);//q-(r<-b/2+special);
+    }else//6/-4=-1%2,10/-4=-2%2
+    {
+        return q-(r>-b/2-special);//q-(-r<b/2+special);
+    }
+}
+*/
 template<std::signed_integral Ts>
 #ifdef INT_ABS_CE
     #define S_DIVR_CE
@@ -124,6 +145,53 @@ struct aint_dw{
         constexpr uint8_t width=std::numeric_limits<Tu>::digits;
         return typename rankOf<Ta>::two(h)<<width|l;
     }
+    constexpr
+    aint_dw& operator +=(const Ta b)
+    noexcept
+    {
+        Tu co;
+        bool done=true;
+#ifdef __clang__
+        if constexpr(std::is_same_v<Tu,unsigned char>)
+            this->l=__builtin_addcb(this->l,b,0,&co);
+        else if constexpr(std::is_same_v<Tu,unsigned short>)
+            this->l=__builtin_addcs(this->l,b,0,&co);
+        else if constexpr(std::is_same_v<Tu,unsigned>)
+            this->l=__builtin_addc(this->l,b,0,&co);
+        else if constexpr(std::is_same_v<Tu,unsigned long>)
+            this->l=__builtin_addcl(this->l,b,0,&co);
+        else if constexpr(std::is_same_v<Tu,unsigned long long>)
+            this->l=__builtin_addcll(this->l,b,0,&co);
+        else
+            done=false;
+#elifdef __GNUG__
+        if constexpr(sizeof(Ta)<=sizeof(unsigned int))
+        {
+            unsigned int co1;
+            this->l=__builtin_addc(this->l,b,0,&co1);
+            co=co1;
+        }else if constexpr(sizeof(Ta)<=sizeof(unsigned long int))
+        {
+            unsigned long int co1;
+            this->l=__builtin_addcl(this->l,b,0,&co1);
+            co=co1;
+        }else if constexpr(sizeof(Ta)<=sizeof(unsigned long long))
+        {
+            unsigned long long int co1;
+            this->l=__builtin_addcll(this->l,b,0,&co1);
+            co=co1;
+        }else
+            done=false;
+#endif
+        if (!done)
+        {
+            Tu s=this->l+b;
+            co=(this->l & b | (this->l | b) &~ s) >> (std::numeric_limits<Tu>::digits-1);
+            this->l=s;
+        }
+        this->h+=co;
+        return *this;
+    }
 };
 
 template<std::integral T>
@@ -135,8 +203,8 @@ noexcept
     using Th=typename rankOf<Tu>::half;
     constexpr T halfWidth=std::numeric_limits<Th>::digits;
 
-    T aL=Th(a),aH=a>>halfWidth;
-    T bL=Th(b),bH=b>>halfWidth;
+    const T aL=Th(a),aH=a>>halfWidth;
+    const T bL=Th(b),bH=b>>halfWidth;
 
     T d=aH*bL+((aL*bL)>>halfWidth);
     T c1=Th(d);
@@ -151,7 +219,9 @@ noexcept
 template<std::integral T>
 constexpr
 aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
+#ifndef debug_arithmetic
 noexcept
+#endif
 {
 #ifdef debug_arithmetic
     if (by==0)
@@ -167,15 +237,15 @@ noexcept
 }
 template<std::unsigned_integral T>
 constexpr
-std::tuple<T,T>  narrow2Div(const aint_dw<T>/*.h >0*/ dividend,const T/*assume normalized*/ divisor)
+std::tuple<T,T>  narrow2Div(const aint_dw<T> dividend,const T/*assume normalized*/ divisor)
 {
 #ifdef debug_arithmetic
     if (std::countl_zero(divisor))
         throw std::domain_error("unnormalized divisor");
-    if (!dividend.h)
-        throw std::domain_error("dividend.h==0");
+    if (dividend.h>=divisor)
+        throw std::domain_error("q can't fit in 1 part");
 #elif __has_builtin(__builtin_assume)
-    __builtin_assume(std::countl_zero(divisor)==0&&dividend.h>0);
+    __builtin_assume(std::countl_zero(divisor)==0&&dividend.h<divisor);
 #endif
     using Th=typename rankOf<T>::half;
     constexpr uint8_t halfWidth=std::numeric_limits<Th>::digits;
@@ -186,7 +256,10 @@ std::tuple<T,T>  narrow2Div(const aint_dw<T>/*.h >0*/ dividend,const T/*assume n
     T qhat=dividend.h/divisorSplit.h,rhat=dividend.h%divisorSplit.h;
     T c1=qhat*divisorSplit.l,c2=rhat<<halfWidth|dividendLSplit.h;
     if (c1>c2)
-        qhat-=c1-c2>divisor?2:1;
+    {
+        --qhat;
+        qhat-=c1-c2>divisor;
+    }
     q.h=qhat;
 
     T r=(dividend.h<<halfWidth|dividendLSplit.h)-q.h*divisor;
@@ -194,31 +267,22 @@ std::tuple<T,T>  narrow2Div(const aint_dw<T>/*.h >0*/ dividend,const T/*assume n
     qhat=r/divisorSplit.h,rhat=r%divisorSplit.h;
     c1=qhat*divisorSplit.l,c2=rhat<<halfWidth|dividendLSplit.l;
     if (c1>c2)
-        qhat-=c1-c2>divisor?2:1;
+    {
+        --qhat;
+        qhat-=c1-c2>divisor;
+    }
     q.l=qhat;
 
     r=(r<<halfWidth|dividendLSplit.l)-q.l*divisor;
 
     return {q.merge(),r};
 }
-/*
-static int div_round(int a, int b)
+template <std::signed_integral Ts>
+constexpr
+std::make_unsigned_t<Ts> uabs(const Ts a)
+noexcept
 {
-    auto [q,r]=std::div(a,b);
-    //when divisor id even, quotient is odd, round half upward.
-    auto special=q&(b&1^1);//(b&1)==0&&(q&1)==1
-    if (a>0&&b>0)//6/4=1%2,10/4=2%2
-    {
-        return q+(r>b/2-special);//q+(-r<-b/2+special);
-    }else if (a<0&&b<0)//-6/-4=1%-2,-10/-4=2%-2
-    {
-        return q+(-r>-b/2-special);//q+(r<b/2+special);
-    }else if (a>0&&b<0)//-6/4=-1%-2,-10/4=-2%-2
-    {
-        return q-(-r>b/2-special);//q-(r<-b/2+special);
-    }else//6/-4=-1%2,10/-4=-2%2
-    {
-        return q-(r>-b/2-special);//q-(-r<b/2+special);
-    }
+    using Tu=std::make_unsigned_t<Ts>;
+    const bool flag=a<0;
+    return Tu{a}+flag^flag;
 }
-*/
