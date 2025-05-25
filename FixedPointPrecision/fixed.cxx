@@ -85,14 +85,14 @@ export
 
         template <unsigned_integral B1>
         constexpr
-        explicit ufx(ufx<B1, Radix> o)
+        explicit ufx(ufx<B1, Radix,Style> o)
             noexcept: repr(o.repr)
         {
         }
 
         template <uint8_t P1>
         constexpr
-        explicit ufx(ufx<Bone, P1> o)
+        explicit ufx(ufx<Bone, P1,Style> o)
         noexcept: repr(o.repr)
         {
             if constexpr (Radix > P1)
@@ -137,6 +137,35 @@ export
                 aint_dw<Bone> dividend=wideLS(repr,shift+Radix);
                 auto [q,r]=uNarrow211Div(dividend,divisor.repr);
                 return ufx(uround(q,r,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+            }
+        }
+
+        constexpr
+        ufx<typename rankOf<Bone>::two,Radix*2,Style> wideMul(ufx o)const
+        noexcept
+        {
+            return ufx<typename rankOf<Bone>::two,Radix*2,Style>(::wideMul(repr,o.repr).merge(),true);
+        }
+        constexpr
+        ufx operator*(ufx o)const
+        noexcept
+        {
+            if constexpr(requires{typename rankOf<Bone>::two;})
+            {
+                return ufx(ufx<typename rankOf<Bone>::two,Radix,Style>(wideMul(o)));
+            }else
+            {
+                aint_dw<Bone> a=::wideMul(repr,o.repr);
+                if constexpr(Style==round_toward_zero||Style==round_indeterminate||Style==round_toward_neg_infinity)
+                {
+                    return ufx(a.narrowRS(Radix),true);
+                }else
+                {
+                    a<<=numeric_limits<Bone>::digits-Radix-1;
+                    constexpr Bone divisor=1<<std::numeric_limits<Bone>::digits-1;
+                    auto [q,r]=uNarrow211Div<Bone>(a,divisor);
+                    return ufx(uround(q,r,divisor,Style),true);
+                }
             }
         }
     };

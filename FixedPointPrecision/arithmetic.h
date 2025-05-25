@@ -193,7 +193,6 @@ struct aint_dw{
     }
     constexpr
     Ta narrowRS(uint8_t by)const
-    noexcept
     {
 #ifdef debug_arithmetic
         if (by>std::numeric_limits<Tu>::digits)
@@ -206,6 +205,27 @@ struct aint_dw{
         notZero=by;
 
         return h<<notZero<<by-notZero|a;
+    }
+
+    constexpr
+    aint_dw&operator<<=(uint8_t by)
+    {
+#ifdef debug_arithmetic
+        if (by>std::numeric_limits<Tu>::digits)
+            throw std::overflow_error("can't shift by more than width.");
+#endif
+        const Tu l=this->l;
+        bool notZero=by;
+        h<<=notZero;
+        h<<=by-notZero;
+        this->l<<=notZero;
+        this->l<<=by-notZero;
+
+        by=std::numeric_limits<Tu>::digits-by;
+        notZero=by;
+        h|=l>>notZero>>by-notZero;
+
+        return *this;
     }
 };
 
@@ -234,9 +254,6 @@ noexcept
 template<std::integral T>
 constexpr
 aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
-#ifndef debug_arithmetic
-noexcept
-#endif
 {
     using Tu=typename aint_dw<T>::Tu;
 #ifdef debug_arithmetic

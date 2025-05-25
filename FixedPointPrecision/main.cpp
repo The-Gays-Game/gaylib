@@ -27,10 +27,14 @@ void test4()
 
 int main()
 {
-    int16_t a=-32768;
-    aint_dw<int8_t>b(a);
-    int8_t d=8;
-    int8_t c0=b.narrowRS(d);
-    int8_t c1=a>>d;
-    std::cout<<int(c0)<<" "<<int(c1)<<std::endl;
+    ufx<uint16_t,8,std::round_to_nearest> a(4.8),b(39);
+    double c0=a*b;
+    double c1=double(a)*double(b);
+    std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;
+    std::cout<<double(a)<<" "<<double(b)<<std::endl;
+
+
+    // aint_dw<uint8_t> a(1,2);
+    // a<<=0;
+    // std::cout<<int(a.h)<<" "<<int(a.l)<<std::endl;
 }
