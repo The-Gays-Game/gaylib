@@ -3,7 +3,6 @@
 #include<iostream>
 #include<limits>
 #include<iomanip>
-//#define debug_arithmetic
 #include "arithmetic.h"
 import fixed;
 void test4()
@@ -21,10 +20,17 @@ void test4()
     auto [g0,r0]=t;
     std::cout<<g0<<" "<<g1<<std::endl;
     std::cout<<r0<<" "<<r1<<std::endl;
+
+    fx<int16_t,8,std::round_to_nearest>i(32),j(-0.5);
+    std::cout<<double(i/j)<<" "<<(double(i)/double(j))<<std::endl;
 }
 
 int main()
 {
-    fx<int16_t,8,std::round_to_nearest>a(32),b(-0.5);
-    std::cout<<double(a/b)<<" "<<(double(a)/double(b))<<std::endl;
+    int16_t a=-32768;
+    aint_dw<int8_t>b(a);
+    int8_t d=8;
+    int8_t c0=b.narrowRS(d);
+    int8_t c1=a>>d;
+    std::cout<<int(c0)<<" "<<int(c1)<<std::endl;
 }

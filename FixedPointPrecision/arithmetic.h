@@ -1,7 +1,7 @@
 #pragma once
 
 #include<cstdlib>
-//#define debug_arithmetic //declaring it here to avoid gcc bug.
+#define debug_arithmetic
 #ifdef debug_arithmetic
 #include<stdexcept>
 #endif
@@ -30,7 +30,8 @@ constexpr
 T condNeg(const T v,const bool a)
 noexcept
 {
-    return (v^-T{a})+a;
+    //return (v^-T{a})+a;
+    return a?v:-v;
 }
 /*
 static int div_round(int a, int b)
@@ -190,6 +191,22 @@ struct aint_dw{
         this->h+=co;
         return *this;
     }
+    constexpr
+    Ta narrowRS(uint8_t by)const
+    noexcept
+    {
+#ifdef debug_arithmetic
+        if (by>std::numeric_limits<Tu>::digits)
+            throw std::underflow_error("can't shift by more than width.");
+#endif
+        bool notZero=by;
+        auto a=l>>notZero>>by-notZero;
+
+        by=std::numeric_limits<Tu>::digits-by;
+        notZero=by;
+
+        return h<<notZero<<by-notZero|a;
+    }
 };
 
 template<std::integral T>
@@ -221,13 +238,15 @@ aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
 noexcept
 #endif
 {
+    using Tu=typename aint_dw<T>::Tu;
 #ifdef debug_arithmetic
     if (by==0)
         throw std::domain_error("can't shift by 0");
+    if (by>std::numeric_limits<Tu>::digits)
+        throw std::overflow_error("can't shift by more than width");
 #elif __has_builtin(__builtin_assume)
     __builtin_assume(by>0);
 #endif
-    using Tu=typename aint_dw<T>::Tu;
     T h=a>>std::numeric_limits<Tu>::digits-by;
     Tu l=Tu(a)<<by-1;
     l<<=1;
@@ -241,7 +260,7 @@ std::tuple<T,T>  uNarrow211Div(const aint_dw<T> dividend,const T/*assume normali
     if (std::countl_zero(divisor))
         throw std::domain_error("unnormalized divisor");
     if (dividend.h>=divisor)
-        throw std::domain_error("q can't fit in 1 part");
+        throw std::overflow_error("q can't fit in 1 part");
 #elif __has_builtin(__builtin_assume)
     __builtin_assume(__builtin_clzg(divisor)==0&&dividend.h<divisor);
 #endif
@@ -285,19 +304,9 @@ std::tuple<aint_dw<T>,T> u212Div(const aint_dw<T> dividend,const T/*should be no
 #endif
     aint_dw<T> q;
     q.h=dividend.h/divisor;
-    T r=dividend.h%divisor;
+    T r0=dividend.h%divisor;
 
-    auto a=uNarrow211Div(aint_dw<T> (r,dividend.l),divisor);
-    q.l=std::get<0>(a),r=std::get<1>(a);
-    return {q,r};
-}
-
-template <std::signed_integral Ts>
-constexpr
-std::make_unsigned_t<Ts> uabs(const Ts a)
-noexcept
-{
-    using Tu=std::make_unsigned_t<Ts>;
-    const Tu flag=a>>std::numeric_limits<Ts>::digits;
-    return Tu(a)+flag^flag;
+    auto [a,r1]=uNarrow211Div(aint_dw<T> (r0,dividend.l),divisor);
+    q.l=a;
+    return {q,r1};
 }

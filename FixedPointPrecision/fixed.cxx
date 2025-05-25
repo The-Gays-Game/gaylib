@@ -146,6 +146,22 @@ export
     {
         using U = make_unsigned_t<Bone>;
 
+        constexpr
+        U roundQ(U absQ,const U absR,const U absDivisor,const Bone qSign)const
+        noexcept
+        {
+            if constexpr(Style==round_toward_infinity)
+                absQ+=absR!=0&&qSign>0;
+            else if constexpr(Style==round_toward_neg_infinity)
+                absQ-=absR!=0&&qSign<0;
+            else if constexpr(Style==round_to_nearest)
+            {
+                U special=absQ&(absDivisor&1^1);
+                absQ+=absR>(absDivisor>>1)-special;
+            }
+            return absQ;
+        }
+
     public:
         Bone repr;//c++20 defined bit shift on signed integers, right shift additionally comes with sign extending.
 
@@ -232,21 +248,16 @@ export
                 return fx(divr<decltype(dividend)>(dividend,divisor.repr,Style),true);
             }else
             {
-                U absDivisor=uabs(divisor.repr);
+                U absDivisor=condNeg(U(divisor.repr),divisor.repr<0);
                 uint8_t shift=countl_zero(absDivisor);
                 absDivisor<<=shift;
-                aint_dw<U> absDividend=wideLS(uabs(repr),shift+Radix);
+                aint_dw<U> absDividend=wideLS(condNeg(U(repr),repr<0),shift+Radix);
                 auto [absQ,absR]=uNarrow211Div(absDividend,absDivisor);
+#ifdef __clang__
+                __builtin_assume((absDivisor&1)==(divisor.repr&1));
+#endif
                 Bone qSign=repr^divisor.repr;
-                if constexpr(Style==round_toward_infinity)
-                    absQ+=absR!=0&&qSign>0;
-                else if constexpr(Style==round_toward_neg_infinity)
-                    absQ-=absR!=0&&qSign<0;
-                else if constexpr(Style==round_to_nearest)
-                {
-                    U special=absQ&(divisor.repr&1^1);
-                    absQ+=absR>(absDivisor>>1)-special;
-                }
+                absQ=roundQ(absQ,absR,absDivisor,qSign);
                 return fx(condNeg(absQ,qSign<0),true);
             }
         }
