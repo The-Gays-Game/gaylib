@@ -192,21 +192,30 @@ struct aint_dw{
         return *this;
     }
     constexpr
-    Ta narrowRS(uint8_t by)const
+    aint_dw& operator >>=(uint8_t by)
     {
 #ifdef debug_arithmetic
         if (by>std::numeric_limits<Tu>::digits)
             throw std::underflow_error("can't shift by more than width.");
 #endif
+        const Tu h=this->h;
         bool notZero=by;
-        auto a=l>>notZero>>by-notZero;
+        this->h>>=notZero;
+        this->h>>=by-notZero;
+        l>>=notZero;
+        l>>=by-notZero;
 
         by=std::numeric_limits<Tu>::digits-by;
         notZero=by;
+        l|=h<<notZero<<by-notZero;
 
-        return h<<notZero<<by-notZero|a;
+        return *this;
     }
-
+    constexpr
+    aint_dw operator >>(const uint8_t by)const
+    {
+        return aint_dw(*this)>>=by;
+    }
     constexpr
     aint_dw&operator<<=(uint8_t by)
     {
@@ -228,7 +237,28 @@ struct aint_dw{
         return *this;
     }
 };
-
+template<std::unsigned_integral Tu>
+constexpr
+Tu RSr(const aint_dw<Tu> dividend,const uint8_t by,const std::float_round_style s)
+noexcept
+{
+    Tu q=(dividend>>by).l;
+    const uint8_t b=std::numeric_limits<Tu>::digits-by;
+    const bool notZero=b;
+    Tu r=dividend.l&std::numeric_limits<Tu>::max()>>notZero>>b-notZero;
+    switch (s) {
+    case std::round_toward_infinity: {
+            return q+(r!=0);
+    }
+    case std::round_to_nearest: {//tie to even
+            Tu special=q&(by!=0);
+            Tu halfDivisor=(1<<std::numeric_limits<Tu>::digits-1)>>notZero>>b-notZero;
+            return q+(r>halfDivisor-special);
+    }
+    default:
+        return q;
+    }
+}
 template<std::integral T>
 constexpr
 aint_dw<T> wideMul(const T a,const T b)

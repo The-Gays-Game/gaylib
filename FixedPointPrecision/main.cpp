@@ -27,7 +27,7 @@ void test4()
 
 int main()
 {
-    ufx<uint16_t,8,std::round_to_nearest> a(4.8),b(39);
+    ufx<uint16_t,16,std::round_toward_neg_infinity> a(0xffff,true),b(0xffff,true);
     double c0=a*b;
     double c1=double(a)*double(b);
     std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;

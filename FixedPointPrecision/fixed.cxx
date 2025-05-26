@@ -98,7 +98,7 @@ export
             if constexpr (Radix > P1)
                 repr <<= Radix - P1;
             else if constexpr(Radix<P1)
-                repr =divr<Bone>(repr,Bone{1}<<P1 - Radix,Style);
+                repr =RSr(aint_dw<Bone>(0,repr),P1-Radix,Style);
         }
 
         strong_ordering operator<=>(const ufx&) const = default;
@@ -107,9 +107,7 @@ export
         explicit operator Bone()const
         noexcept
         {
-            if constexpr(Radix==numeric_limits<Bone>::digits)
-                return 0;
-            return repr>>Radix;
+            return RSr(aint_dw<Bone>(0,repr),Radix,round_toward_zero);
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -156,16 +154,7 @@ export
             }else
             {
                 aint_dw<Bone> a=::wideMul(repr,o.repr);
-                if constexpr(Style==round_toward_zero||Style==round_indeterminate||Style==round_toward_neg_infinity)
-                {
-                    return ufx(a.narrowRS(Radix),true);
-                }else
-                {
-                    a<<=numeric_limits<Bone>::digits-Radix-1;
-                    constexpr Bone divisor=1<<std::numeric_limits<Bone>::digits-1;
-                    auto [q,r]=uNarrow211Div<Bone>(a,divisor);
-                    return ufx(uround(q,r,divisor,Style),true);
-                }
+                return ufx(RSr(a,Radix,Style),true);
             }
         }
     };
