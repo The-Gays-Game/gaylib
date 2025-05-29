@@ -127,14 +127,13 @@ export
             {
                 typename rankOf<Bone>::two dividend=repr;
                 dividend<<=Radix;
-                return ufx(divr<decltype(dividend)>(dividend,divisor.repr,Style),true);
+                return ufx(divr<typename rankOf<Bone>::two>(dividend,divisor.repr,Style),true);
             }else
             {
                 uint8_t shift=countl_zero(divisor.repr);
                 divisor.repr<<=shift;
                 aint_dw<Bone> dividend=wideLS(repr,shift+Radix);
-                auto [q,r]=uNarrow211Div(dividend,divisor.repr);
-                return ufx(uround(q,r,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+                return ufx(divr(dividend,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
             }
         }
 
