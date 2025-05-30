@@ -7,10 +7,10 @@
 import fixed;
 void test0()
 {
-    aint_dw<int8_t> a(int16_t{28});
-    uint8_t b=3;
+    int16_t a=-4,b=-8;
+    int16_t c=divr(a,b,0,std::round_to_nearest);
 
-    std::cout<<int16_t(a.narrowRSr(b,std::round_to_nearest))<<" "<<std::endl;
+    std::cout<<int16_t(c)<<" "<<std::endl;
 }
 int main()
 {
