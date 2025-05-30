@@ -98,7 +98,7 @@ export
             if constexpr (Radix > P1)
                 repr <<= Radix - P1;
             else if constexpr(Radix<P1)
-                repr =RSr(aint_dw<Bone>(0,repr),P1-Radix,Style);
+                repr =aint_dw<Bone>(0,repr).narrowRSr(P1-Radix,Style);
         }
 
         strong_ordering operator<=>(const ufx&) const = default;
@@ -107,7 +107,7 @@ export
         explicit operator Bone()const
         noexcept
         {
-            return RSr(aint_dw<Bone>(0,repr),Radix,round_toward_zero);
+            return aint_dw<Bone>(0,repr).narrowRSr(Radix,round_toward_zero);;
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -123,11 +123,14 @@ export
         constexpr
         ufx operator/(ufx divisor)const
         {
-            if constexpr(requires{typename rankOf<Bone>::two;})
+            if constexpr(Radix==0)
+            {
+                return ufx(divr(repr,divisor.repr,Style),true);
+            }
+            else if constexpr(requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
-                dividend<<=Radix;
-                return ufx(divr<typename rankOf<Bone>::two>(dividend,divisor.repr,Style),true);
+                return ufx(divr<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style),true);
             }else
             {
                 uint8_t shift=countl_zero(divisor.repr);
@@ -138,22 +141,21 @@ export
         }
 
         constexpr
-        ufx<typename rankOf<Bone>::two,Radix*2,Style> wideMul(ufx o)const
-        noexcept
-        {
-            return ufx<typename rankOf<Bone>::two,Radix*2,Style>(::wideMul(repr,o.repr).merge(),true);
-        }
-        constexpr
         ufx operator*(ufx o)const
         noexcept
         {
-            if constexpr(requires{typename rankOf<Bone>::two;})
+            if constexpr(Radix==0)
             {
-                return ufx(ufx<typename rankOf<Bone>::two,Radix,Style>(wideMul(o)));
+                return repr*o.repr;
+            }
+            else if constexpr(requires{typename rankOf<Bone>::two;})
+            {
+                auto a=typename rankOf<Bone>::two(repr)*o.repr;
+                return ufx(aint_dw<typename rankOf<Bone>::two>(0,a).narrowRSr(Radix,Style),true);
             }else
             {
-                aint_dw<Bone> a=::wideMul(repr,o.repr);
-                return ufx(RSr(a,Radix,Style),true);
+                aint_dw<Bone> a=wideMul(repr,o.repr);
+                return ufx(a.narrowRSr(Radix,Style),true);
             }
         }
     };

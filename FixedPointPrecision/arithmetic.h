@@ -1,6 +1,6 @@
 #pragma once
 
-#include<cstdlib>
+#include<cstdint>
 #define debug_arithmetic
 #ifdef debug_arithmetic
 #include<stdexcept>
@@ -181,8 +181,6 @@ struct aint_dw{
             {
             case std::round_toward_infinity:
                 return eucQ+(mod!=0);
-            case std::round_toward_neg_infinity:
-                return eucQ;
             case std::round_toward_zero:
                 return eucQ+(mod!=0&&h<0);
             case std::round_to_nearest:
@@ -243,7 +241,7 @@ noexcept
     c1+=aL*bH;
 
     T eH=aH*bH+c2+(c1>>halfWidth);
-    Tu eL=Tu(a)*b;
+    Tu eL=Tu(a)*Tu(b);
     return {eH,eL};
 }
 
@@ -255,15 +253,19 @@ aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
 #ifdef debug_arithmetic
     if (by==0)
         throw std::domain_error("can't shift by 0");
-    if (by>std::numeric_limits<Tu>::digits)
-        throw std::overflow_error("can't shift by more than width");
 #elif __has_builtin(__builtin_assume)
     __builtin_assume(by>0);
 #endif
-    T h=a>>std::numeric_limits<Tu>::digits-by;
-    Tu l=Tu(a)<<by-1;
-    l<<=1;
-    return {h,l};
+    if (by>=std::numeric_limits<Tu>::digits)
+    {
+        T h=a<<by-std::numeric_limits<Tu>::digits;
+        return {h,0};
+    }else
+    {
+        T h=a>>std::numeric_limits<Tu>::digits-by;
+        Tu l=Tu(a)<<by;
+        return {h,l};
+    }
 }
 template<std::unsigned_integral T>
 constexpr

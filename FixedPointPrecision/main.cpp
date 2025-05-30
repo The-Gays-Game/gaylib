@@ -14,12 +14,12 @@ void test0()
 }
 int main()
 {
-    test0();
-    // ufx<uint16_t,16,std::round_toward_infinity> a(0.25),b(0.75);
-    // double c0=a/b;
-    // double c1=double(a)/double(b);
-    // std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;
-    // std::cout<<double(a)<<" "<<double(b)<<std::endl;
+    //test0();
+    ufx<uint16_t,16,std::round_to_nearest> a(0xffff,true),b(0.78);
+    double c0=a*b;
+    double c1=double(a)*double(b);
+    std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;
+    std::cout<<double(a)<<" "<<double(b)<<std::endl;
 
 
     // aint_dw<uint8_t> a(1,2);
