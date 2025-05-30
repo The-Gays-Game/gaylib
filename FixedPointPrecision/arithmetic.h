@@ -27,11 +27,11 @@
 
 template <std::integral T>
 constexpr
-T condNeg(const T v,const bool a)
+T condNeg(const T v,const bool doNeg)
 noexcept
 {
     //return (v^-T{a})+a;
-    return a?v:-v;
+    return doNeg?-v:v;
 }
 template<std::integral> struct rankOf{};
 
@@ -320,21 +320,21 @@ Ta aint_dw<Ta>::narrowRSr(const uint8_t by,const std::float_round_style s)const
                 Tu halfDivisor=1<<by-1;
 
                 //when h>0, +half to round near tie away. when h<0, << is round down, add half for round near tie to 0, then -1 for tie away.
-                Tu qNeg=h>>std::numeric_limits<Ta>::digits;
+                Tu qNeg=Tu(h)>>std::numeric_limits<Ta>::digits;
                 aint_dw dividend=*this;
                 dividend+=halfDivisor-qNeg;//dividend<0: won't overflow. dividend>0: max(dividend)==wideMul(int_min,int_min), max(dividend)+halfDivisor<=int_max.
                 Ta q=(dividend>>by).l;
                 mod=dividend.l&modder;
 
                 bool toEven=(mod+qNeg&modder)==0&&(q&1)==1;//--q when q is odd and rem==0. when q>0, rem==0<=>mod==0; when q<0, rem==0<=>mod==divisor-1
-                return q-condNeg(Ta{toEven},qNeg);
+                return q-condNeg(Ta(toEven),qNeg);
             }
         default:
             return eucQ;
             }
         }
     }
-}
+
 template<std::unsigned_integral T>
 constexpr
 std::tuple<T,T>  uNarrow211Div(const aint_dw<T> &dividend,const T/*assume normalized*/ divisor)

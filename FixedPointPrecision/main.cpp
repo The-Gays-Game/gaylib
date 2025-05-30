@@ -7,11 +7,10 @@
 import fixed;
 void test0()
 {
-    aint_dw<int8_t> a(int16_t{-128});
-    int8_t b=127;
-    int16_t c1=a.merge()-b;
-    a-=b;
-    std::cout<<a.merge()<<" "<<c1<<std::endl;
+    aint_dw<int8_t> a(int16_t{28});
+    uint8_t b=3;
+
+    std::cout<<int16_t(a.narrowRSr(b,std::round_to_nearest))<<" "<<std::endl;
 }
 int main()
 {
