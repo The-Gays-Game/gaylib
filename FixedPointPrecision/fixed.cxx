@@ -11,15 +11,14 @@ export module fixed;
 using namespace std;
 
 template<integral B>
-static constexpr
+constexpr
 aint_dw<B> extend(const B v)
 noexcept
 {
     return aint_dw<B>(v>>numeric_limits<B>::digits,v);
 }
 template<floating_point F,integral B>
-static
-#ifdef S_DIVR_CE
+#ifdef FP_MANIP_CE
 #define TOF_CE
 constexpr
 #endif
@@ -30,9 +29,9 @@ noexcept(noexcept(ldexp(v,int{})))
     if (numeric_limits<B>::digits>nl::digits)
     {
         uint8_t sd;
-        if constexpr(is_unsigned_v<B>) {
+        if constexpr(is_unsigned_v<B>)
             sd=numeric_limits<B>::digits-countl_zero(v);
-        }else {
+        else {
             make_unsigned_t<B> av=abs(v);
             sd=numeric_limits<decltype(av)>::digits-countl_zero(av);
         }
@@ -58,7 +57,6 @@ noexcept(noexcept(ldexp(v,int{})))
  *      uses explicit operators.
  *      completely replaced by stl or builtin features.
  */
-template<class T>concept wider=requires{typename rankOf<T>::two;};
 export
 {
     template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits>=R;
@@ -153,9 +151,7 @@ export
         noexcept
         {
             if (Radix==0)
-            {
-                return repr*o.repr;
-            }
+                return ufx(repr*o.repr,true);
             else if (requires{typename rankOf<Bone>::two;})
             {
                 auto a=typename rankOf<Bone>::two(repr)*o.repr;
@@ -240,8 +236,9 @@ export
         noexcept(noexcept(toF<F>(repr,Radix,Style))) {
             return toF<F>(repr,Radix,Style);
         }
-
+#ifdef S_DIVR_CE
         constexpr
+#endif
         fx operator/(fx divisor)const
         {
             if (Radix==0){
@@ -257,5 +254,20 @@ export
                 return fx(lsDivR(repr,divisor.repr,Radix,Style),true);
         }
     }
+        constexpr
+        fx operator*(fx o)const
+        {
+            if (Radix==0)
+                return fx(repr*o.repr,true);
+            else if constexpr (requires{typename rankOf<Bone>::two;})
+            {
+                typename rankOf<Bone>::two a=typename rankOf<Bone>::two(repr)*o.repr;
+                return fx(extend(a).narrowRSr(Radix,Style),true);
+            }else
+            {
+                aint_dw<Bone> a=wideMul(repr,o.repr);
+                return fx(a.narrowRSr(Radix,Style),true);
+            }
+        }
     };
     }
