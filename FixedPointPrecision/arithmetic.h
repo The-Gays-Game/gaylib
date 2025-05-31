@@ -161,7 +161,7 @@ struct aint_dw{
             return eucQ;
         const Tu modder=std::numeric_limits<Tu>::max()>>std::numeric_limits<Tu>::digits-by;
         Tu mod=l&modder;
-        if constexpr(std::is_unsigned_v<Ta>)
+        if(std::is_unsigned_v<Ta>)
         {
             switch (s)
             {
@@ -202,27 +202,6 @@ struct aint_dw{
         }
     }
 };
-/*
-static int div_round(int a, int b)
-{
-    auto [q,r]=std::div(a,b);
-    //when divisor id even, quotient is odd, round half upward.
-    auto special=q&(b&1^1);//(b&1)==0&&(q&1)==1
-    if (a>0&&b>0)//6/4=1%2,10/4=2%2
-    {
-        return q+(r>b/2-special);//q+(-r<-b/2+special);
-    }else if (a<0&&b<0)//-6/-4=1%-2,-10/-4=2%-2
-    {
-        return q+(-r>-b/2-special);//q+(r<b/2+special);
-    }else if (a>0&&b<0)//-6/4=-1%-2,-10/4=-2%-2
-    {
-        return q-(-r>b/2-special);//q-(r<-b/2+special);
-    }else//6/-4=-1%2,10/-4=-2%2
-    {
-        return q-(r>-b/2-special);//q-(-r<b/2+special);
-    }
-}
-*/
 template<std::integral T>
 constexpr
 aint_dw<T> wideMul(const T a,const T b)
@@ -314,7 +293,7 @@ constexpr
 Tdivisor divr(const Tdividend &dividend,const Tdivisor divisor,const std::float_round_style s)
 {
     Tdivisor q,r;
-    if constexpr(std::is_same_v<Tdividend,Tdivisor>)
+    if(std::is_same_v<Tdividend,Tdivisor>)
         q=dividend/divisor,r=dividend%divisor;
     else
     {
@@ -360,7 +339,7 @@ Ts divr(const Ts dividend,const Ts divisor,const std::float_round_style s)
 }
 template<std::signed_integral Ts>
 constexpr
-Ts divr(const Ts dividend,const Ts divisor,const uint8_t scale, const std::float_round_style s)
+Ts lsDivR(const Ts dividend,const Ts divisor,const uint8_t scale, const std::float_round_style s)
 {
     using Tu=typename aint_dw<Ts>::Tu;
     Tu absDivisor=condNeg(Tu(divisor),divisor<0);

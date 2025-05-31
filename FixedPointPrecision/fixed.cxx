@@ -10,6 +10,13 @@ module;
 export module fixed;
 using namespace std;
 
+template<integral B>
+static constexpr
+aint_dw<B> extend(const B v)
+noexcept
+{
+    return aint_dw<B>(v>>numeric_limits<B>::digits,v);
+}
 template<floating_point F,integral B>
 #ifdef S_DIVR_CE
 #define TOF_CE
@@ -19,7 +26,7 @@ F toF(B v,uint8_t radix,float_round_style S)
 noexcept(noexcept(ldexp(v,int{})))
 {
     using nl=numeric_limits<F>;
-    if constexpr(numeric_limits<B>::digits>nl::digits)
+    if (numeric_limits<B>::digits>nl::digits)
     {
         uint8_t sd;
         if constexpr(is_unsigned_v<B>) {
@@ -31,7 +38,7 @@ noexcept(noexcept(ldexp(v,int{})))
 
         bool subnorm=nl::has_denorm==denorm_present&&int8_t(radix-sd)>=-(nl::min_exponent-1);
         if (int8_t more=sd-nl::digits;S!=round_indeterminate&&!subnorm&&more>0) {//with radix<=128, sd<=128, then sd<=2 needs no rounding.
-            v=divr(v,B{1}<<more,S);
+            v=extend(v).narrowRSr(more,S);
             radix-=more;
             return ldexp(v,-int8_t(radix));
         }
@@ -66,7 +73,7 @@ export
             noexcept: repr(v)
         {
             if (!raw)
-                if constexpr(Radix<numeric_limits<Bone>::digits)
+                if (Radix<numeric_limits<Bone>::digits)
                     repr<<=Radix;
                 else
                     repr=0;
@@ -95,9 +102,9 @@ export
         explicit ufx(ufx<Bone, P1,Style> o)
         noexcept: repr(o.repr)
         {
-            if constexpr (Radix > P1)
+            if  (Radix > P1)
                 repr <<= Radix - P1;
-            else if constexpr(Radix<P1)
+            else if (Radix<P1)
                 repr =aint_dw<Bone>(0,repr).narrowRSr(P1-Radix,Style);
         }
 
@@ -123,11 +130,11 @@ export
         constexpr
         ufx operator/(ufx divisor)const
         {
-            if constexpr(Radix==0)
+            if (Radix==0)
             {
                 return ufx(divr(repr,divisor.repr,Style),true);
             }
-            else if constexpr(requires{typename rankOf<Bone>::two;})
+            else if (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
                 return ufx(divr<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style),true);
@@ -144,11 +151,11 @@ export
         ufx operator*(ufx o)const
         noexcept
         {
-            if constexpr(Radix==0)
+            if (Radix==0)
             {
                 return repr*o.repr;
             }
-            else if constexpr(requires{typename rankOf<Bone>::two;})
+            else if (requires{typename rankOf<Bone>::two;})
             {
                 auto a=typename rankOf<Bone>::two(repr)*o.repr;
                 return ufx(aint_dw<typename rankOf<Bone>::two>(0,a).narrowRSr(Radix,Style),true);
@@ -164,23 +171,6 @@ export
     class fx
     {
         using U = make_unsigned_t<Bone>;
-
-        constexpr
-        U roundQ(U absQ,const U absR,const U absDivisor,const Bone qSign)const
-        noexcept
-        {
-            if constexpr(Style==round_toward_infinity)
-                absQ+=absR!=0&&qSign>0;
-            else if constexpr(Style==round_toward_neg_infinity)
-                absQ-=absR!=0&&qSign<0;
-            else if constexpr(Style==round_to_nearest)
-            {
-                U special=absQ&(absDivisor&1^1);
-                absQ+=absR>(absDivisor>>1)-special;
-            }
-            return absQ;
-        }
-
     public:
         Bone repr;//c++20 defined bit shift on signed integers, right shift additionally comes with sign extending.
 
@@ -207,20 +197,14 @@ export
         {}
 
         template <uint8_t P1>
-#ifdef S_DIVR_CE
         constexpr
-#endif
         explicit fx(fx<Bone, P1,Style> o)
         noexcept: repr(o.repr)
         {
-            if constexpr (Radix > P1)
+            if (Radix > P1)
                 repr <<= Radix - P1;
-            else if constexpr (Radix<P1) {
-                if constexpr(Style==round_toward_neg_infinity)
-                    repr>>=P1-Radix;
-                else
-                    repr =divr<Bone>(repr,Bone{1}<<P1 - Radix,Style);
-            }
+            else if (Radix<P1)
+                repr =extend(repr).narrowRSr(P1-Radix,Style);
         }
 
         strong_ordering operator <=>(const fx&) const = default;
@@ -245,7 +229,7 @@ export
         explicit operator Bone()const
         noexcept
         {
-            return repr/(Bone{1}<<Radix);
+            return extend(repr).narrowRSr(Radix,round_toward_zero);
         }
 
         template<floating_point F>
@@ -260,25 +244,18 @@ export
         constexpr
         fx operator/(fx divisor)const
         {
-            if constexpr(requires{typename rankOf<Bone>::two;})
+            if (Radix==0){
+                return fx(divr(repr,divisor.repr,Style),true);
+            }
+            else if (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
                 dividend<<=Radix;
                 return fx(divr<decltype(dividend)>(dividend,divisor.repr,Style),true);
             }else
             {
-                U absDivisor=condNeg(U(divisor.repr),divisor.repr<0);
-                uint8_t shift=countl_zero(absDivisor);
-                absDivisor<<=shift;
-                aint_dw<U> absDividend=wideLS(condNeg(U(repr),repr<0),shift+Radix);
-                auto [absQ,absR]=uNarrow211Div(absDividend,absDivisor);
-#ifdef __clang__
-                __builtin_assume((absDivisor&1)==(divisor.repr&1));
-#endif
-                Bone qSign=repr^divisor.repr;
-                absQ=roundQ(absQ,absR,absDivisor,qSign);
-                return fx(condNeg(absQ,qSign<0),true);
-            }
+                return fx(lsDivR(repr,divisor.repr,Radix,Style),true);
         }
+    }
     };
-}
+    }
