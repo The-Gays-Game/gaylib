@@ -293,7 +293,7 @@ constexpr
 Tdivisor divr(const Tdividend &dividend,const Tdivisor divisor,const std::float_round_style s)
 {
     Tdivisor q,r;
-    if(std::is_same_v<Tdividend,Tdivisor>)
+    if constexpr(std::is_same_v<Tdividend,Tdivisor>)
         q=dividend/divisor,r=dividend%divisor;
     else
     {
@@ -354,12 +354,15 @@ Ts lsDivR(const Ts dividend,const Ts divisor,const uint8_t scale, const std::flo
     {
         case std::round_toward_infinity:
         absQ+=absR!=0&&!qNeg;
+        break;
         case std::round_toward_neg_infinity:
-        absQ-=absR!=0&&qNeg;//a^b==0 implies r==0
+        absQ+=absR!=0&&qNeg;//a^b==0 implies r==0
+        break;
     case std::round_to_nearest:
         {
             Tu special=absQ&(divisor&1^1);
             absQ+=absR>(absDivisor>>1)-special;
+            break;
         }
     default: ;
     }

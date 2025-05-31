@@ -15,7 +15,7 @@ void test0()
 int main()
 {
     //test0();
-    fx<int16_t,15,std::round_to_nearest> a(0.3),b(-0.33);
+    fx<int16_t,15,std::round_toward_neg_infinity> a(0.3),b(-0.33);
     double c0=a/b;
     double c1=double(a)/double(b);
     std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;

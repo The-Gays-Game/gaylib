@@ -134,7 +134,7 @@ export
             {
                 return ufx(divr(repr,divisor.repr,Style),true);
             }
-            else if (requires{typename rankOf<Bone>::two;})
+            else if constexpr(requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
                 return ufx(divr<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style),true);
@@ -247,7 +247,7 @@ export
             if (Radix==0){
                 return fx(divr(repr,divisor.repr,Style),true);
             }
-            else if (requires{typename rankOf<Bone>::two;})
+            else if constexpr (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
                 dividend<<=Radix;
