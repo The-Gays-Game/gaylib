@@ -18,6 +18,7 @@ noexcept
     return aint_dw<B>(v>>numeric_limits<B>::digits,v);
 }
 template<floating_point F,integral B>
+static
 #ifdef S_DIVR_CE
 #define TOF_CE
 constexpr
@@ -217,7 +218,6 @@ export
         strong_ordering operator<=>(ufx<U, Radix,Style> o) const
             noexcept
         {
-            //compiler will optimize if branches out when told to.
             if (cmp_less(repr, o.repr))
                 return strong_ordering::less;
             if (cmp_equal(repr, o.repr))

@@ -203,7 +203,7 @@ struct aint_dw{
     }
 };
 template<std::integral T>
-constexpr
+static constexpr
 aint_dw<T> wideMul(const T a,const T b)
 noexcept
 {
@@ -225,7 +225,7 @@ noexcept
 }
 
 template<std::integral T>
-constexpr
+static constexpr
 aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
 {
     using Tu=typename aint_dw<T>::Tu;
@@ -247,7 +247,7 @@ aint_dw<T> wideLS(const T a,const uint8_t/*assume by>0*/ by)
     }
 }
 template<std::unsigned_integral T>
-constexpr
+static constexpr
 std::tuple<T,T>  uNarrow211Div(const aint_dw<T> &dividend,const T/*assume normalized*/ divisor)
 {
 #ifdef debug_arithmetic
@@ -289,7 +289,7 @@ std::tuple<T,T>  uNarrow211Div(const aint_dw<T> &dividend,const T/*assume normal
     return {q.merge(),r};
 }
 template<std::unsigned_integral Tdivisor,class Tdividend>requires std::same_as<Tdividend,Tdivisor>||std::same_as<Tdividend,aint_dw<Tdivisor>>
-constexpr
+static constexpr
 Tdivisor divr(const Tdividend &dividend,const Tdivisor divisor,const std::float_round_style s)
 {
     Tdivisor q,r;
@@ -312,6 +312,7 @@ Tdivisor divr(const Tdividend &dividend,const Tdivisor divisor,const std::float_
     }
 }
 template<std::signed_integral Ts>
+static
 #ifdef INT_ABS_CE
     #define S_DIVR_CE
 constexpr
@@ -338,7 +339,7 @@ Ts divr(const Ts dividend,const Ts divisor,const std::float_round_style s)
     }
 }
 template<std::signed_integral Ts>
-constexpr
+static constexpr
 Ts lsDivR(const Ts dividend,const Ts divisor,const uint8_t scale, const std::float_round_style s)
 {
     using Tu=typename aint_dw<Ts>::Tu;
@@ -369,7 +370,7 @@ Ts lsDivR(const Ts dividend,const Ts divisor,const uint8_t scale, const std::flo
     return condNeg(absQ,qNeg);
 }
 template<std::unsigned_integral T>
-constexpr
+static constexpr
 std::tuple<aint_dw<T>,T> u212Div(const aint_dw<T> dividend,const T/*should be normalized for uNarrow211Div*/ divisor)
 {
 #ifdef debug_arithmetic
