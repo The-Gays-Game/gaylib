@@ -1,7 +1,11 @@
 #pragma once
 
-#include<cstdint>
 #define debug_arithmetic
+
+#include<cstdint>
+#include<limits>
+#include<tuple>
+#include<bit>
 #ifdef debug_arithmetic
 #include<stdexcept>
 #endif
@@ -141,7 +145,7 @@ struct aint_dt
 
     constexpr
     aint_dt& operator +=(const Tu b) //this function assumes Tu,Ta are the only things we know.
-        noexcept
+        noexcept(std::is_unsigned_v<Ta>)
     {
         Tu co;
         bool done = true;
@@ -179,11 +183,10 @@ struct aint_dt
     }
 
     constexpr
-    aint_dt operator +(const Tu b) const
-        noexcept
+    auto operator +(const Tu b) const
+        noexcept(noexcept(aint_dt() += b))
     {
-        aint_dt a = *this;
-        return a += b;
+        return aint_dt(*this) += b;
     }
 
     constexpr
@@ -208,7 +211,7 @@ struct aint_dt
     }
 
     constexpr
-    aint_dt operator >>(const uint8_t by) const
+    auto operator >>(const uint8_t by) const
     {
         return aint_dt(*this) >>= by;
     }
@@ -254,9 +257,9 @@ struct aint_dt
                     Tu qNeg = Tu(h) >> std::numeric_limits<Ta>::digits;
                     aint_dt dividend = *this + (halfDivisor - qNeg); //dividend<0: won't overflow. dividend>0: max(dividend)==wideMul(int_min,int_min), max(dividend)+halfDivisor<=int_max.
                     Ta q = (dividend >> by).l;
-                    mod = dividend.l & modder;
+                    mod = dividend.l + qNeg & modder; //no need for dividend.l&modder first because unsigned arithmetic is mod 2^n.
 
-                    bool toEven = (mod + qNeg & modder) == 0 && (q & 1) == 1; //--q when q is odd and rem==0. when q>0, rem==0<=>mod==0; when q<0, rem==0<=>mod==divisor-1
+                    bool toEven = mod == 0 && (q & 1) == 1; //--q when q is odd and rem==0. when q>0, rem==0<=>mod==0; when q<0, rem==0<=>mod==divisor-1
                     return q - condNeg(Ta(toEven), qNeg);
                 }
             default:
@@ -278,7 +281,7 @@ aint_dt<T> wideMul(const T a, const T b)
     const T aL = Th(a), aH = a >> halfWidth;
     const T bL = Th(b), bH = b >> halfWidth;
 
-    T d = aH * bL + ((aL * bL) >> halfWidth);
+    T d = aH * bL + (aL * bL >> halfWidth);
     T c1 = Th(d);
     T c2 = d >> halfWidth;
     c1 += aL * bH;
@@ -375,7 +378,7 @@ Tdivisor divRnd(const Tdividend& dividend, const Tdivisor divisor, const std::fl
         {
             //tie to even
             Tdivisor special = q & (divisor & 1 ^ 1);
-            return q + (r > (divisor >> 1) - special);
+            return q + (r > divisor / 2 - special);
         }
     default:
         return q;
@@ -390,22 +393,15 @@ constexpr
 #endif
 Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s)
 {
-    Ts q = dividend / divisor;
+    Ts q = dividend / divisor, r = dividend % divisor;
     switch (s)
     {
     case std::round_toward_infinity:
-        {
-            Ts r = dividend % divisor;
-            return q + (r != 0 && q >= 0); //q can be 0 when r!=0
-        }
+        return q + (r != 0 && q >= 0); //q can be 0 when r!=0
     case std::round_toward_neg_infinity:
-        {
-            Ts r = dividend % divisor;
-            return q - (r != 0 && q <= 0);
-        }
+        return q - (r != 0 && q <= 0);
     case std::round_to_nearest:
         {
-            Ts r = dividend % divisor;
             Ts special = q & (divisor & 1 ^ 1); //round up tie when odd quotient even divisor. round down tie when even quotient and divisor
             return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, (dividend ^ divisor) < 0);
             //B(abs(b))/2-special>=0;r and b/2 will never overflow after abs. 5%-8==5, 5/-8==0, but we need -1, so must use dividend^divisor.
@@ -439,7 +435,7 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std:
     case std::round_to_nearest:
         {
             Tu special = absQ & (divisor & 1 ^ 1);
-            absQ += absR > (absDivisor >> 1) - special;
+            absQ += absR > absDivisor / 2 - special;
             break;
         }
     default: ;
