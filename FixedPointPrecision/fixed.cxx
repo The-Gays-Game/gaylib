@@ -166,7 +166,7 @@ export
         {
             if (Radix == 0)
                 repr *= o.repr;
-            else if (requires { typename rankOf<Bone>::two; })
+            else if constexpr(requires { typename rankOf<Bone>::two; })
             {
                 auto a = typename rankOf<Bone>::two(repr) * o.repr;
                 repr = aint_dt<typename rankOf<Bone>::two>(0, a).narrowArsRnd(Radix, Style);
