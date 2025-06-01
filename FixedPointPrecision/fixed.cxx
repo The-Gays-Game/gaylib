@@ -12,10 +12,10 @@ using namespace std;
 
 template<integral B>
 constexpr
-aint_dw<B> extend(const B v)
+aint_dt<B> extend(const B v)
 noexcept
 {
-    return aint_dw<B>(v>>numeric_limits<B>::digits,v);
+    return aint_dt<B>(v>>numeric_limits<B>::digits,v);
 }
 template<floating_point F,integral B>
 #ifdef FP_MANIP_CE
@@ -38,7 +38,7 @@ noexcept(noexcept(ldexp(v,int{})))
 
         bool subnorm=nl::has_denorm==denorm_present&&int8_t(radix-sd)>=-(nl::min_exponent-1);
         if (int8_t more=sd-nl::digits;S!=round_indeterminate&&!subnorm&&more>0) {//with radix<=128, sd<=128, then sd<=2 needs no rounding.
-            v=extend(v).narrowRSr(more,S);
+            v=extend(v).narrowArsRnd(more,S);
             radix-=more;
             return ldexp(v,-int8_t(radix));
         }
@@ -104,7 +104,7 @@ export
             if  (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix<P1)
-                repr =aint_dw<Bone>(0,repr).narrowRSr(P1-Radix,Style);
+                repr =aint_dt<Bone>(0,repr).narrowArsRnd(P1-Radix,Style);
         }
 
         strong_ordering operator<=>(const ufx&) const = default;
@@ -113,7 +113,7 @@ export
         explicit operator Bone()const
         noexcept
         {
-            return aint_dw<Bone>(0,repr).narrowRSr(Radix,round_toward_zero);;
+            return aint_dt<Bone>(0,repr).narrowArsRnd(Radix,round_toward_zero);;
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -131,18 +131,18 @@ export
         {
             if (Radix==0)
             {
-                return ufx(divr(repr,divisor.repr,Style),true);
+                return ufx(divRnd(repr,divisor.repr,Style),true);
             }
             else if constexpr(requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
-                return ufx(divr<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style),true);
+                return ufx(divRnd<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style),true);
             }else
             {
                 uint8_t shift=countl_zero(divisor.repr);
                 divisor.repr<<=shift;
-                aint_dw<Bone> dividend=wideLS(repr,shift+Radix);
-                return ufx(divr(dividend,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+                aint_dt<Bone> dividend=wideLS(repr,shift+Radix);
+                return ufx(divRnd(dividend,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
             }
         }
 
@@ -155,11 +155,11 @@ export
             else if (requires{typename rankOf<Bone>::two;})
             {
                 auto a=typename rankOf<Bone>::two(repr)*o.repr;
-                return ufx(aint_dw<typename rankOf<Bone>::two>(0,a).narrowRSr(Radix,Style),true);
+                return ufx(aint_dt<typename rankOf<Bone>::two>(0,a).narrowArsRnd(Radix,Style),true);
             }else
             {
-                aint_dw<Bone> a=wideMul(repr,o.repr);
-                return ufx(a.narrowRSr(Radix,Style),true);
+                aint_dt<Bone> a=wideMul(repr,o.repr);
+                return ufx(a.narrowArsRnd(Radix,Style),true);
             }
         }
     };
@@ -201,7 +201,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix<P1)
-                repr =extend(repr).narrowRSr(P1-Radix,Style);
+                repr =extend(repr).narrowArsRnd(P1-Radix,Style);
         }
 
         strong_ordering operator <=>(const fx&) const = default;
@@ -225,7 +225,7 @@ export
         explicit operator Bone()const
         noexcept
         {
-            return extend(repr).narrowRSr(Radix,round_toward_zero);
+            return extend(repr).narrowArsRnd(Radix,round_toward_zero);
         }
 
         template<floating_point F>
@@ -242,16 +242,16 @@ export
         fx operator/(fx divisor)const
         {
             if (Radix==0){
-                return fx(divr(repr,divisor.repr,Style),true);
+                return fx(divRnd(repr,divisor.repr,Style),true);
             }
             else if constexpr (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
                 dividend<<=Radix;
-                return fx(divr<decltype(dividend)>(dividend,divisor.repr,Style),true);
+                return fx(divRnd<decltype(dividend)>(dividend,divisor.repr,Style),true);
             }else
             {
-                return fx(lsDivR(repr,divisor.repr,Radix,Style),true);
+                return fx(lsDivRnd(repr,divisor.repr,Radix,Style),true);
         }
     }
         constexpr
@@ -262,11 +262,11 @@ export
             else if constexpr (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two a=typename rankOf<Bone>::two(repr)*o.repr;
-                return fx(extend(a).narrowRSr(Radix,Style),true);
+                return fx(extend(a).narrowArsRnd(Radix,Style),true);
             }else
             {
-                aint_dw<Bone> a=wideMul(repr,o.repr);
-                return fx(a.narrowRSr(Radix,Style),true);
+                aint_dt<Bone> a=wideMul(repr,o.repr);
+                return fx(a.narrowArsRnd(Radix,Style),true);
             }
         }
     };

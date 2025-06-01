@@ -112,21 +112,21 @@ struct rankOf<__int128_t>
 #endif
 
 template <std::integral Ta>
-struct aint_dw
+struct aint_dt
 {
     using Tu = std::make_unsigned_t<Ta>;
     Ta h;
     Tu l;
-    aint_dw() = default;
+    aint_dt() = default;
 
     constexpr
-    aint_dw(const Ta h, const Tu l)
+    aint_dt(const Ta h, const Tu l)
         noexcept: h(h), l(l)
     {
     }
 
     constexpr
-    explicit aint_dw(typename rankOf<Ta>::two v)
+    explicit aint_dt(typename rankOf<Ta>::two v)
         noexcept: h(v >> std::numeric_limits<Tu>::digits), l(v)
     {
     }
@@ -140,7 +140,7 @@ struct aint_dw
     }
 
     constexpr
-    aint_dw& operator +=(const Tu b) //this function assumes Tu,Ta are the only things we know.
+    aint_dt& operator +=(const Tu b) //this function assumes Tu,Ta are the only things we know.
         noexcept
     {
         Tu co;
@@ -179,15 +179,15 @@ struct aint_dw
     }
 
     constexpr
-    aint_dw operator +(const Tu b) const
+    aint_dt operator +(const Tu b) const
         noexcept
     {
-        aint_dw a = *this;
+        aint_dt a = *this;
         return a += b;
     }
 
     constexpr
-    aint_dw& operator >>=(uint8_t by)
+    aint_dt& operator >>=(uint8_t by)
     {
 #ifdef debug_arithmetic
         if (by > std::numeric_limits<Tu>::digits)
@@ -208,13 +208,13 @@ struct aint_dw
     }
 
     constexpr
-    aint_dw operator >>(const uint8_t by) const
+    aint_dt operator >>(const uint8_t by) const
     {
-        return aint_dw(*this) >>= by;
+        return aint_dt(*this) >>= by;
     }
 
     constexpr
-    Ta narrowRSr(const uint8_t by, const std::float_round_style s) const
+    Ta narrowArsRnd(const uint8_t by, const std::float_round_style s) const
     {
         const Ta eucQ = (*this >> by).l;
         if (by == 0)
@@ -252,7 +252,7 @@ struct aint_dw
 
                     //when h>0, +half to round near tie away. when h<0, << is round down, add half for round near tie to 0, then -1 for tie away.
                     Tu qNeg = Tu(h) >> std::numeric_limits<Ta>::digits;
-                    aint_dw dividend = *this + (halfDivisor - qNeg); //dividend<0: won't overflow. dividend>0: max(dividend)==wideMul(int_min,int_min), max(dividend)+halfDivisor<=int_max.
+                    aint_dt dividend = *this + (halfDivisor - qNeg); //dividend<0: won't overflow. dividend>0: max(dividend)==wideMul(int_min,int_min), max(dividend)+halfDivisor<=int_max.
                     Ta q = (dividend >> by).l;
                     mod = dividend.l & modder;
 
@@ -268,10 +268,10 @@ struct aint_dw
 
 template <std::integral T>
 static constexpr
-aint_dw<T> wideMul(const T a, const T b)
+aint_dt<T> wideMul(const T a, const T b)
     noexcept(std::is_unsigned_v<T>)
 {
-    using Tu = typename aint_dw<T>::Tu;
+    using Tu = typename aint_dt<T>::Tu;
     using Th = typename rankOf<Tu>::half;
     constexpr T halfWidth = std::numeric_limits<Th>::digits;
 
@@ -290,9 +290,9 @@ aint_dw<T> wideMul(const T a, const T b)
 
 template <std::integral T>
 static constexpr
-aint_dw<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
+aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 {
-    using Tu = typename aint_dw<T>::Tu;
+    using Tu = typename aint_dt<T>::Tu;
 #ifdef debug_arithmetic
     if (by == 0)
         throw std::domain_error("can't shift by 0");
@@ -314,7 +314,7 @@ aint_dw<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 
 template <std::unsigned_integral T>
 static constexpr
-std::tuple<T, T> uNarrow211Div(const aint_dw<T>& dividend, const T/*assume normalized*/ divisor)
+std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume normalized*/ divisor)
 {
 #ifdef debug_arithmetic
     if (std::countl_zero(divisor))
@@ -327,8 +327,8 @@ std::tuple<T, T> uNarrow211Div(const aint_dw<T>& dividend, const T/*assume norma
     using Th = typename rankOf<T>::half;
     constexpr uint8_t halfWidth = std::numeric_limits<Th>::digits;
 
-    const aint_dw<Th> divisorSplit(divisor), dividendLSplit(dividend.l);
-    aint_dw<Th> q;
+    const aint_dt<Th> divisorSplit(divisor), dividendLSplit(dividend.l);
+    aint_dt<Th> q;
 
     T qhat = dividend.h / divisorSplit.h, rhat = dividend.h % divisorSplit.h;
     T c1 = qhat * divisorSplit.l, c2 = rhat << halfWidth | dividendLSplit.h;
@@ -355,9 +355,9 @@ std::tuple<T, T> uNarrow211Div(const aint_dw<T>& dividend, const T/*assume norma
     return {q.merge(), r};
 }
 
-template <std::unsigned_integral Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dw<Tdivisor>>
+template <std::unsigned_integral Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor>>
 static constexpr
-Tdivisor divr(const Tdividend& dividend, const Tdivisor divisor, const std::float_round_style s)
+Tdivisor divRnd(const Tdividend& dividend, const Tdivisor divisor, const std::float_round_style s)
 {
     Tdivisor q, r;
     if constexpr (std::is_same_v<Tdividend, Tdivisor>)
@@ -388,7 +388,7 @@ static
 #define S_DIVR_CE
 constexpr
 #endif
-Ts divr(const Ts dividend, const Ts divisor, const std::float_round_style s)
+Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s)
 {
     Ts q = dividend / divisor;
     switch (s)
@@ -417,13 +417,13 @@ Ts divr(const Ts dividend, const Ts divisor, const std::float_round_style s)
 
 template <std::signed_integral Ts>
 static constexpr
-Ts lsDivR(const Ts dividend, const Ts divisor, const uint8_t scale, const std::float_round_style s)
+Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std::float_round_style s)
 {
-    using Tu = typename aint_dw<Ts>::Tu;
+    using Tu = typename aint_dt<Ts>::Tu;
     Tu absDivisor = condNeg(Tu(divisor), divisor < 0);
     uint8_t shift = std::countl_zero(absDivisor);
     absDivisor <<= shift;
-    aint_dw<Tu> absDividend = wideLS(condNeg(Tu(dividend), dividend < 0), scale + shift);
+    aint_dt<Tu> absDividend = wideLS(condNeg(Tu(dividend), dividend < 0), scale + shift);
 
     auto [absQ,absR] = uNarrow211Div(absDividend, absDivisor);
 
@@ -449,17 +449,17 @@ Ts lsDivR(const Ts dividend, const Ts divisor, const uint8_t scale, const std::f
 
 template <std::unsigned_integral T>
 static constexpr
-std::tuple<aint_dw<T>, T> u212Div(const aint_dw<T> dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
+std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
 {
 #ifdef debug_arithmetic
     if (divisor == 0)
         throw std::domain_error("0 divisor");
 #endif
-    aint_dw<T> q;
+    aint_dt<T> q;
     q.h = dividend.h / divisor;
     T r0 = dividend.h % divisor;
 
-    auto [a,r1] = uNarrow211Div(aint_dw<T>(r0, dividend.l), divisor);
+    auto [a,r1] = uNarrow211Div(aint_dt<T>(r0, dividend.l), divisor);
     q.l = a;
     return {q, r1};
 }

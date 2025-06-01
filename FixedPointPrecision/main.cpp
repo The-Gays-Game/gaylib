@@ -8,14 +8,14 @@ import fixed;
 void test0()
 {
     int16_t a=-4,b=-8;
-    int16_t c=lsDivR(a,b,0,std::round_to_nearest);
+    int16_t c=lsDivRnd(a,b,0,std::round_to_nearest);
 
     std::cout<<int16_t(c)<<" "<<std::endl;
 }
 int main()
 {
     //test0();
-    fx<int16_t,15,std::round_to_nearest> a(-1),b(-1);
+    fx<int16_t,15,std::round_to_nearest> a(-1),b(-0.999);
     double c0=a*b;
     double c1=double(a)*double(b);
     std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;
