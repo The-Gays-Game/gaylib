@@ -15,9 +15,9 @@ void test0()
 int main()
 {
     //test0();
-    fx<int16_t,15,std::round_to_nearest> a(-1),b(-0.999);
-    double c0=a*b;
-    double c1=double(a)*double(b);
+    fx<int16_t,15,std::round_to_nearest> a(0.4),b(-0.7),c(0.1);
+    double c0=(a-c)/b;
+    double c1=(double(a)-double(c))/double(b);
     std::cout<<std::setprecision(10)<<c0<<" "<<c1<<std::endl;
     std::cout<<double(a)<<" "<<double(b)<<std::endl;
 

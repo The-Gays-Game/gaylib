@@ -127,40 +127,78 @@ export
         }
 
         constexpr
-        ufx operator/(ufx divisor)const
+        ufx& operator/=(ufx divisor)
         {
             if (Radix==0)
-            {
-                return ufx(divRnd(repr,divisor.repr,Style),true);
-            }
+                repr=divRnd(repr,divisor.repr,Style);
             else if constexpr(requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
-                return ufx(divRnd<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style),true);
+                repr=divRnd<typename rankOf<Bone>::two>(dividend<<Radix,divisor.repr,Style);
             }else
             {
                 uint8_t shift=countl_zero(divisor.repr);
                 divisor.repr<<=shift;
                 aint_dt<Bone> dividend=wideLS(repr,shift+Radix);
-                return ufx(divRnd(dividend,divisor.repr,Style),true);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+                repr=divRnd(dividend,divisor.repr,Style);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
             }
+            return *this;
         }
 
         constexpr
-        ufx operator*(ufx o)const
+        auto operator /(ufx divisor)const
+        {
+            return ufx(*this)/=divisor;
+        }
+
+        constexpr
+        ufx& operator*=(ufx o)
         noexcept
         {
             if (Radix==0)
-                return ufx(repr*o.repr,true);
+                repr*=o.repr;
             else if (requires{typename rankOf<Bone>::two;})
             {
                 auto a=typename rankOf<Bone>::two(repr)*o.repr;
-                return ufx(aint_dt<typename rankOf<Bone>::two>(0,a).narrowArsRnd(Radix,Style),true);
+                repr=aint_dt<typename rankOf<Bone>::two>(0,a).narrowArsRnd(Radix,Style);
             }else
             {
                 aint_dt<Bone> a=wideMul(repr,o.repr);
-                return ufx(a.narrowArsRnd(Radix,Style),true);
+                repr=a.narrowArsRnd(Radix,Style);
             }
+            return *this;
+        }
+        constexpr
+        auto operator*(ufx o)const
+        noexcept
+        {
+            return ufx(*this)*=o;
+        }
+        constexpr
+        ufx& operator+=(ufx o)
+        noexcept
+        {
+            repr+=o.repr;
+            return *this;
+        }
+        constexpr
+        auto operator+(ufx o)const
+        noexcept
+        {
+            return ufx(*this)+=o;
+        }
+        constexpr
+ufx& operator-=(ufx o)
+noexcept
+        {
+            repr-=o.repr;
+            return *this;
+        }
+        constexpr
+        auto operator-(ufx o)const
+        noexcept
+        {
+            return ufx(*this)-=o;
         }
     };
 
@@ -239,35 +277,67 @@ export
 #ifdef S_DIVR_CE
         constexpr
 #endif
-        fx operator/(fx divisor)const
+        fx& operator/=(fx divisor)
         {
-            if (Radix==0){
-                return fx(divRnd(repr,divisor.repr,Style),true);
-            }
+            if (Radix==0)
+                repr=divRnd(repr,divisor.repr,Style);
             else if constexpr (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two dividend=repr;
-                dividend<<=Radix;
-                return fx(divRnd<decltype(dividend)>(dividend,divisor.repr,Style),true);
+                repr=divRnd<decltype(dividend)>(dividend<<Radix,divisor.repr,Style);
             }else
-            {
-                return fx(lsDivRnd(repr,divisor.repr,Radix,Style),true);
-        }
+                repr=lsDivRnd(repr,divisor.repr,Radix,Style);
+        return *this;
     }
+#ifdef S_DIVR_CE
         constexpr
-        fx operator*(fx o)const
+#endif
+        auto operator/(fx dividend)const
+        {
+            return fx(*this)/=dividend;
+        }
+        constexpr
+        fx& operator*=(fx o)
         {
             if (Radix==0)
-                return fx(repr*o.repr,true);
+                repr*=o.repr;
             else if constexpr (requires{typename rankOf<Bone>::two;})
             {
                 typename rankOf<Bone>::two a=typename rankOf<Bone>::two(repr)*o.repr;
-                return fx(extend(a).narrowArsRnd(Radix,Style),true);
+                repr=extend(a).narrowArsRnd(Radix,Style);
             }else
             {
                 aint_dt<Bone> a=wideMul(repr,o.repr);
-                return fx(a.narrowArsRnd(Radix,Style),true);
+                repr=a.narrowArsRnd(Radix,Style);
             }
+            return *this;
+        }
+        constexpr
+        auto operator*(fx o)const
+        {
+            return fx(*this)*=o;
+        }
+        constexpr
+        fx& operator+=(fx o)
+        {
+            repr+=o.repr;
+            return *this;
+        }
+        constexpr
+        auto operator+(fx o)const
+        {
+            return fx(*this)+=o;
+        }
+                constexpr
+        fx& operator-=(fx o)
+        {
+            repr-=o.repr;
+            return *this;
+        }
+        constexpr
+        auto operator-(fx o)const
+        {
+            return fx(*this)-=o;
         }
     };
     }
