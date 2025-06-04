@@ -87,8 +87,8 @@ template <>
 struct rankOf<uint64_t>
 {
     using half = uint32_t;
-#if defined(__GNUG__)||defined(__clang__)
-    using two = __uint128_t;
+#ifdef __SIZEOF_INT128__
+    using two = unsigned __int128;
 #endif
 };
 
@@ -96,20 +96,20 @@ template <>
 struct rankOf<int64_t>
 {
     using half = int32_t;
-#if defined(__GNUG__)||defined(__clang__)
-    using two = __int128_t;
+#ifdef __SIZEOF_INT128__
+    using two = __int128;
 #endif
 };
 
-#if defined(__GNUG__)||defined(__clang__)
+#ifdef __SIZEOF_INT128__
 template <>
-struct rankOf<__uint128_t>
+struct rankOf<unsigned __int128>
 {
     using half = uint64_t;
 };
 
 template <>
-struct rankOf<__int128_t>
+struct rankOf<__int128>
 {
     using half = int64_t;
 };
