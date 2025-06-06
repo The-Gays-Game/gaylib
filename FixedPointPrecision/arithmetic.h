@@ -30,6 +30,19 @@
 #define INT_ABS_CE
 #endif
 
+#ifdef __SIZEOF_INT128__
+template<class T> concept all_int=std::integral<T>||std::same_as<T,__int128>||std::same_as<T,unsigned __int128>;
+template<class T>concept all_uint=std::unsigned_integral<T>||std::same_as<T,unsigned __int128>;
+template<class T>concept all_sint=std::signed_integral<T>||std::same_as<T,__int128>;
+#define test_Tint all_int
+#define test_Tuint all_uint
+#define test_Tsint all_sint
+#else
+#define test_Tint std::integral
+#define test_Tuint std::unsigned_integral
+#define test_Tsint std::signed_integral
+#endif
+
 template <std::integral T>
 static constexpr
 T

@@ -7,9 +7,8 @@ module;
 #include<algorithm>
 #include <cmath>
 export module fixed;
-using namespace std;
 
-template <integral B>
+template <std::integral B>
 constexpr
 aint_dt<B>
 #if defined(__GNUG__)||defined(__clang__)
@@ -18,39 +17,39 @@ aint_dt<B>
  extend(const B v)
     noexcept
 {
-    return aint_dt<B>(v >> numeric_limits<B>::digits, v);
+    return aint_dt<B>(v >> std::numeric_limits<B>::digits, v);
 }
 
-template <floating_point F,integral B>
+template <std::floating_point F,std::integral B>
 #ifdef FP_MANIP_CE
 #define TOF_CE
 constexpr
 #endif
-F toF(B v, uint8_t radix, float_round_style S)
-    noexcept(noexcept(ldexp(v, int{})))
+F toF(B v, uint8_t radix, std::float_round_style S)
+    noexcept(noexcept(std::ldexp(v, int{})))
 {
-    using nl = numeric_limits<F>;
-    if (numeric_limits<B>::digits > nl::digits)
+    using nl = std::numeric_limits<F>;
+    if (std::numeric_limits<B>::digits > nl::digits)
     {
         uint8_t sd;
-        if constexpr (is_unsigned_v<B>)
-            sd = numeric_limits<B>::digits - countl_zero(v);
+        if constexpr (std::is_unsigned_v<B>)
+            sd = std::numeric_limits<B>::digits - std::countl_zero(v);
         else
         {
-            make_unsigned_t<B> av = abs(v);
-            sd = numeric_limits<decltype(av)>::digits - countl_zero(av);
+            std::make_unsigned_t<B> av = abs(v);
+            sd = std::numeric_limits<decltype(av)>::digits - std::countl_zero(av);
         }
 
-        bool subnorm = nl::has_denorm == denorm_present && int8_t(sd-radix) <= nl::min_exponent - 1;
-        if (int8_t more = sd - nl::digits; S != round_indeterminate && !subnorm && more > 0)
+        bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd-radix) <= nl::min_exponent - 1;
+        if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm && more > 0)
         {
             //with radix<=128, sd<=128, then sd<=2 needs no rounding.
             v = extend(v).narrowArsRnd(more, S);
             radix -= more;
-            return ldexp(v, -int8_t(radix));
+            return std::ldexp(v, -int8_t(radix));
         }
     }
-    return ldexp(v, -int16_t(radix));
+    return std::ldexp(v, -int16_t(radix));
 }
 
 /*
@@ -66,10 +65,10 @@ F toF(B v, uint8_t radix, float_round_style S)
  */
 export
 {
-    template <class T, uint8_t R> concept testSize = numeric_limits<T>::digits >= R;
+    template <class T, uint8_t R> concept testSize = std::numeric_limits<T>::digits >= R;
 
     //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
-    template <unsigned_integral Bone, uint8_t Radix, float_round_style Style = round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
+    template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
     struct ufx
     {
         Bone repr;
@@ -80,25 +79,25 @@ export
             noexcept: repr(v)
         {
             if (!raw)
-                if (Radix < numeric_limits<Bone>::digits)
+                if (Radix < std::numeric_limits<Bone>::digits)
                     repr <<= Radix;
                 else
                     repr = 0;
         }
 
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
-        template <floating_point F>
+        template <std::floating_point F>
 #ifdef FP_MANIP_CE
         constexpr
 #endif
         explicit ufx(F v)
-            noexcept(noexcept(ldexp(v, int{}))): repr(ldexp(v, Radix))
+            noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix))
         {
         }
 
         //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
 
-        template <unsigned_integral B1>
+        template <std::unsigned_integral B1>
         constexpr
         explicit ufx(ufx<B1, Radix, Style> o)
             noexcept: repr(o.repr)
@@ -116,17 +115,17 @@ export
                 repr = aint_dt<Bone>(0, repr).narrowArsRnd(P1 - Radix, Style);
         }
 
-        strong_ordering operator<=>(const ufx&) const = default;
+        auto operator<=>(const ufx&) const = default;
 
         constexpr
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt<Bone>(0, repr).narrowArsRnd(Radix, round_toward_zero);;
+            return aint_dt<Bone>(0, repr).narrowArsRnd(Radix, std::round_toward_zero);;
         }
 
         //conversion to float point is always defined and never lose all precision.
-        template <floating_point F>
+        template <std::floating_point F>
 #ifdef TOF_CE
         constexpr
 #endif
@@ -148,7 +147,7 @@ export
             }
             else
             {
-                uint8_t shift = countl_zero(divisor.repr);
+                uint8_t shift = std::countl_zero(divisor.repr);
                 divisor.repr <<= shift;
                 aint_dt<Bone> dividend = wideLS(repr, shift + Radix);
                 repr = divRnd(dividend, divisor.repr, Style);
@@ -220,10 +219,10 @@ export
         }
     };
 
-    template <signed_integral Bone, uint8_t Radix, float_round_style Style = round_toward_zero> requires testSize<Bone, Radix>
+    template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style =std:: round_toward_zero> requires testSize<Bone, Radix>
     class fx
     {
-        using U = make_unsigned_t<Bone>;
+        using U = std::make_unsigned_t<Bone>;
 
     public:
         Bone repr; //c++20 defined bit shift on signed integers, right shift additionally comes with sign extending.
@@ -236,16 +235,16 @@ export
                 repr <<= Radix;
         }
 
-        template <floating_point F>
+        template <std::floating_point F>
 #ifdef FP_MANIP_CE
         constexpr
 #endif
         explicit fx(F v)
-            noexcept(noexcept(ldexp(v, int{}))): repr(ldexp(v, Radix))
+            noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix))
         {
         }
 
-        template <signed_integral B1>
+        template <std::signed_integral B1>
         constexpr
         explicit fx(fx<B1, Radix, Style> o)
             noexcept: repr(o.repr)
@@ -263,31 +262,35 @@ export
                 repr = extend(repr).narrowArsRnd(P1 - Radix, Style);
         }
 
-        strong_ordering operator <=>(const fx&) const = default;
+        auto operator <=>(const fx&) const = default;
 
         /*intcmp functions in <utility> doesn't offer threeway. default threeway can't compare signed and unsigned.
          *fx::U is already defined, for ufx we need to redefine make_signed_t<Bone>. we'd also need a forward declaration.
          *comparing between signed and unsigned of same size is always meaningful arithmetically.
          */
         constexpr
-        strong_ordering operator<=>(ufx<U, Radix, Style> o) const
+        std::strong_ordering
+#if defined(__GNUG__)||defined(__clang__)
+[[gnu::pure]]
+#endif
+        operator<=>(ufx<U, Radix, Style> o) const
             noexcept
         {
             if (cmp_less(repr, o.repr))
-                return strong_ordering::less;
+                return std::strong_ordering::less;
             if (cmp_equal(repr, o.repr))
-                return strong_ordering::equivalent;
-            return strong_ordering::greater;
+                return std::strong_ordering::equivalent;
+            return std::strong_ordering::greater;
         }
 
         constexpr
         explicit operator Bone() const
             noexcept
         {
-            return extend(repr).narrowArsRnd(Radix, round_toward_zero);
+            return extend(repr).narrowArsRnd(Radix, std::round_toward_zero);
         }
 
-        template <floating_point F>
+        template <std::floating_point F>
 #ifdef TOF_CE
         constexpr
 #endif
