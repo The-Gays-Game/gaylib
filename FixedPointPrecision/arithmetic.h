@@ -6,6 +6,7 @@
 #include<limits>
 #include<tuple>
 #include<bit>
+#include<version>
 #ifdef debug_arithmetic
 #include<stdexcept>
 #endif
@@ -21,17 +22,21 @@
     #define __has_constexpr_builtin(x) 0
 #endif
 
-#if defined(CPP23)||defined(__GNUG__)
+#if defined(CPP23)||defined(__GLIBCXX__)
 #define FP_MANIP_CE
 #endif
 
-#if defined(CPP23)||defined(__GNUG__)
+#if defined(CPP23)||defined(__GLIBCXX__)
 #define INT_ABS_CE
 #endif
 
 template <std::integral T>
 static constexpr
-T condNeg(const T v, const bool doNeg)
+T
+#if defined(__GNUG__)||defined(__clang__)
+[[gnu::hot,gnu::const]]
+#endif
+condNeg(const T v, const bool doNeg)
     noexcept
 {
     //return (v^-T{a})+a;
@@ -136,8 +141,11 @@ struct aint_dt
     }
 
     constexpr
-    typename rankOf<Ta>::two merge() const
-        noexcept
+    typename rankOf<Ta>::two
+#if defined(__GNUG__)||defined(__clang__)
+[[gnu::artificial,gnu::pure]]
+#endif
+       merge() const noexcept
     {
         constexpr uint8_t width = std::numeric_limits<Tu>::digits;
         return typename rankOf<Ta>::two(h) << width | l;
@@ -183,7 +191,11 @@ struct aint_dt
     }
 
     constexpr
-    auto operator +(const Tu b) const
+    auto
+#if defined(__GNUG__)||defined(__clang__)
+[[gnu::pure]]
+#endif
+    operator +(const Tu b) const
         noexcept(noexcept(aint_dt() += b))
     {
         return aint_dt(*this) += b;
@@ -211,13 +223,21 @@ struct aint_dt
     }
 
     constexpr
-    auto operator >>(const uint8_t by) const
+    auto
+#if defined(__GNUG__)||defined(__clang__)
+[[gnu::pure]]
+#endif
+    operator >>(const uint8_t by) const
     {
         return aint_dt(*this) >>= by;
     }
 
     constexpr
-    Ta narrowArsRnd(const uint8_t by, const std::float_round_style s) const
+    Ta
+#if defined(__GNUG__)||defined(__clang__)
+    [[gnu::pure]]
+#endif
+    narrowArsRnd(const uint8_t by, const std::float_round_style s) const
     {
         const Ta eucQ = (*this >> by).l;
         if (by == 0)

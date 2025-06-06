@@ -10,15 +10,18 @@ export module fixed;
 using namespace std;
 
 template <integral B>
-static constexpr
-aint_dt<B> extend(const B v)
+constexpr
+aint_dt<B>
+#if defined(__GNUG__)||defined(__clang__)
+    [[gnu::const]]
+#endif
+ extend(const B v)
     noexcept
 {
     return aint_dt<B>(v >> numeric_limits<B>::digits, v);
 }
 
 template <floating_point F,integral B>
-static
 #ifdef FP_MANIP_CE
 #define TOF_CE
 constexpr
@@ -38,7 +41,7 @@ F toF(B v, uint8_t radix, float_round_style S)
             sd = numeric_limits<decltype(av)>::digits - countl_zero(av);
         }
 
-        bool subnorm = nl::has_denorm == denorm_present && int8_t(radix - sd) >= -(nl::min_exponent - 1);
+        bool subnorm = nl::has_denorm == denorm_present && int8_t(sd-radix) <= nl::min_exponent - 1;
         if (int8_t more = sd - nl::digits; S != round_indeterminate && !subnorm && more > 0)
         {
             //with radix<=128, sd<=128, then sd<=2 needs no rounding.
