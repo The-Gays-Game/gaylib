@@ -16,7 +16,7 @@ constexpr
 F toF(B v, uint8_t radix, std::float_round_style S)
     noexcept(noexcept(std::ldexp(v, int{})))
 {
-    using nl = std::numeric_limits<F>;
+    using nl= std::numeric_limits<F>;
     if (std::numeric_limits<B>::digits > nl::digits)
     {
         uint8_t sd;

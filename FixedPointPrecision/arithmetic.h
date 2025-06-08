@@ -45,11 +45,11 @@ template<class T>concept all_sint=std::signed_integral<T>||std::same_as<T,__int1
 
 template <test_Tint T>
 static constexpr
-T
+T condNeg
 #if defined(__GNUG__)||defined(__clang__)
 [[gnu::hot]]
 #endif
-condNeg(const T v, const bool doNeg)
+(const T v, const bool doNeg)
     noexcept
 {
     //return (v^-T{a})+a;
@@ -147,22 +147,23 @@ struct aint_dt
     {
     }
 
+    template<test_Tint T> requires (std::is_signed_v<T> ==std::is_signed_v<Ta>&&(std::numeric_limits<Ta>::digits+std::numeric_limits<Tu>::digits>=std::numeric_limits<T>::digits) )
     constexpr
-    explicit aint_dt(typename rankOf<Ta>::two v)
-        noexcept requires requires {typename rankOf<Ta>::two;}: h(v >> std::numeric_limits<Ta>::digits), l(v)
+    explicit aint_dt(T v)
+        noexcept : h(v >> std::numeric_limits<T>::digits), l(v)
     {
     }
 
     constexpr
-    typename rankOf<Ta>::two
+    auto merge
 #if defined(__GNUG__)||defined(__clang__)
 [[gnu::artificial]]
 #endif
-       merge() const
+    ()const
     noexcept requires requires {typename rankOf<Ta>::two;}
     {
         constexpr uint8_t width = std::numeric_limits<Tu>::digits;
-        return typename rankOf<Ta>::two(h) << width | l;
+        return typename rankOf<Ta>::two(typename rankOf<Ta>::two(h) << width | l);
     }
 
     constexpr

@@ -1,3 +1,4 @@
+#include <cmath>
 #include<cstdint>
 #include <format>
 #include<iostream>
@@ -14,6 +15,7 @@ void test0()
 }
 int main()
 {
-    ufx<unsigned __int128, 128>a(1,true);
-    std::cout<<float(a);
+    ufx<unsigned __int128, 128>a(0b1,true);
+    double b=a;
+    std::cout<<b<<" "<<std::isnormal(std::ldexp(1,-128))<<std::endl;
 }
