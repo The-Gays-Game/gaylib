@@ -8,19 +8,7 @@ module;
 #include <cmath>
 export module fixed;
 
-template <std::integral B>
-constexpr
-aint_dt<B>
-#if defined(__GNUG__)||defined(__clang__)
-    [[gnu::const]]
-#endif
- extend(const B v)
-    noexcept
-{
-    return aint_dt<B>(v >> std::numeric_limits<B>::digits, v);
-}
-
-template <std::floating_point F,std::integral B>
+template <std::floating_point F,test_Tint B>
 #ifdef FP_MANIP_CE
 #define TOF_CE
 constexpr
@@ -44,7 +32,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
         if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm && more > 0)
         {
             //with radix<=128, sd<=128, then sd<=2 needs no rounding.
-            v = extend(v).narrowArsRnd(more, S);
+            v = aint_dt<B>(v).narrowArsRnd(more, S);
             radix -= more;
             return std::ldexp(v, -int8_t(radix));
         }
@@ -68,7 +56,7 @@ export
     template <class T, uint8_t R> concept testSize = std::numeric_limits<T>::digits >= R;
 
     //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
-    template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
+    template <test_Tuint Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
     struct ufx
     {
         Bone repr;
@@ -97,7 +85,7 @@ export
 
         //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
 
-        template <std::unsigned_integral B1>
+        template <test_Tuint B1>
         constexpr
         explicit ufx(ufx<B1, Radix, Style> o)
             noexcept: repr(o.repr)
@@ -219,7 +207,7 @@ export
         }
     };
 
-    template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style =std:: round_toward_zero> requires testSize<Bone, Radix>
+    template <test_Tsint Bone, uint8_t Radix, std::float_round_style Style =std:: round_toward_zero> requires testSize<Bone, Radix>
     class fx
     {
         using U = std::make_unsigned_t<Bone>;
@@ -244,7 +232,7 @@ export
         {
         }
 
-        template <std::signed_integral B1>
+        template <test_Tsint B1>
         constexpr
         explicit fx(fx<B1, Radix, Style> o)
             noexcept: repr(o.repr)
@@ -259,7 +247,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix < P1)
-                repr = extend(repr).narrowArsRnd(P1 - Radix, Style);
+                repr = aint_dt(repr).narrowArsRnd(P1 - Radix, Style);
         }
 
         auto operator <=>(const fx&) const = default;
@@ -269,11 +257,7 @@ export
          *comparing between signed and unsigned of same size is always meaningful arithmetically.
          */
         constexpr
-        std::strong_ordering
-#if defined(__GNUG__)||defined(__clang__)
-[[gnu::pure]]
-#endif
-        operator<=>(ufx<U, Radix, Style> o) const
+        std::strong_ordering operator<=>(ufx<U, Radix, Style> o) const
             noexcept
         {
             if (cmp_less(repr, o.repr))
@@ -287,7 +271,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return extend(repr).narrowArsRnd(Radix, std::round_toward_zero);
+            return aint_dt(repr).narrowArsRnd(Radix, std::round_toward_zero);
         }
 
         template <std::floating_point F>
@@ -331,7 +315,7 @@ export
             else if constexpr (requires { typename rankOf<Bone>::two; })
             {
                 typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
-                repr = extend(a).narrowArsRnd(Radix, Style);
+                repr = aint_dt(a).narrowArsRnd(Radix, Style);
             }
             else
             {

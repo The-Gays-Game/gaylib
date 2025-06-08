@@ -38,16 +38,16 @@ template<class T>concept all_sint=std::signed_integral<T>||std::same_as<T,__int1
 #define test_Tuint all_uint
 #define test_Tsint all_sint
 #else
-#define test_Tint std::integral
-#define test_Tuint std::unsigned_integral
-#define test_Tsint std::signed_integral
+#define test_Tint test_Tint
+#define test_Tuint test_Tuint
+#define test_Tsint test_Tsint
 #endif
 
-template <std::integral T>
+template <test_Tint T>
 static constexpr
 T
 #if defined(__GNUG__)||defined(__clang__)
-[[gnu::hot,gnu::const]]
+[[gnu::hot]]
 #endif
 condNeg(const T v, const bool doNeg)
     noexcept
@@ -56,7 +56,7 @@ condNeg(const T v, const bool doNeg)
     return doNeg ? -v : v;
 }
 
-template <std::integral>
+template <test_Tint>
 struct rankOf
 {
 };
@@ -133,7 +133,7 @@ struct rankOf<__int128>
 };
 #endif
 
-template <std::integral Ta>
+template <test_Tint Ta>
 struct aint_dt
 {
     using Tu = std::make_unsigned_t<Ta>;
@@ -149,16 +149,17 @@ struct aint_dt
 
     constexpr
     explicit aint_dt(typename rankOf<Ta>::two v)
-        noexcept: h(v >> std::numeric_limits<Tu>::digits), l(v)
+        noexcept requires requires {typename rankOf<Ta>::two;}: h(v >> std::numeric_limits<Ta>::digits), l(v)
     {
     }
 
     constexpr
     typename rankOf<Ta>::two
 #if defined(__GNUG__)||defined(__clang__)
-[[gnu::artificial,gnu::pure]]
+[[gnu::artificial]]
 #endif
-       merge() const noexcept
+       merge() const
+    noexcept requires requires {typename rankOf<Ta>::two;}
     {
         constexpr uint8_t width = std::numeric_limits<Tu>::digits;
         return typename rankOf<Ta>::two(h) << width | l;
@@ -204,11 +205,7 @@ struct aint_dt
     }
 
     constexpr
-    auto
-#if defined(__GNUG__)||defined(__clang__)
-[[gnu::pure]]
-#endif
-    operator +(const Tu b) const
+    auto operator +(const Tu b) const
         noexcept(noexcept(aint_dt() += b))
     {
         return aint_dt(*this) += b;
@@ -236,21 +233,13 @@ struct aint_dt
     }
 
     constexpr
-    auto
-#if defined(__GNUG__)||defined(__clang__)
-[[gnu::pure]]
-#endif
-    operator >>(const uint8_t by) const
+    auto operator >>(const uint8_t by) const
     {
         return aint_dt(*this) >>= by;
     }
 
     constexpr
-    Ta
-#if defined(__GNUG__)||defined(__clang__)
-    [[gnu::pure]]
-#endif
-    narrowArsRnd(const uint8_t by, const std::float_round_style s) const
+    Ta narrowArsRnd(const uint8_t by, const std::float_round_style s) const
     {
         const Ta eucQ = (*this >> by).l;
         if (by == 0)
@@ -302,7 +291,7 @@ struct aint_dt
     }
 };
 
-template <std::integral T>
+template <test_Tint T>
 static constexpr
 aint_dt<T> wideMul(const T a, const T b)
     noexcept(std::is_unsigned_v<T>)
@@ -324,7 +313,7 @@ aint_dt<T> wideMul(const T a, const T b)
     return {eH, eL};
 }
 
-template <std::integral T>
+template <test_Tint T>
 static constexpr
 aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 {
@@ -348,7 +337,7 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
     }
 }
 
-template <std::unsigned_integral T>
+template <test_Tuint T>
 static constexpr
 std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume normalized*/ divisor)
 {
@@ -391,7 +380,7 @@ std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume norma
     return {q.merge(), r};
 }
 
-template <std::unsigned_integral Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor>>
+template <test_Tuint Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor>>
 static constexpr
 Tdivisor divRnd(const Tdividend& dividend, const Tdivisor divisor, const std::float_round_style s)
 {
@@ -418,7 +407,7 @@ Tdivisor divRnd(const Tdividend& dividend, const Tdivisor divisor, const std::fl
     }
 }
 
-template <std::signed_integral Ts>
+template <test_Tsint Ts>
 static
 #ifdef INT_ABS_CE
 #define S_DIVR_CE
@@ -444,7 +433,7 @@ Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s)
     }
 }
 
-template <std::signed_integral Ts>
+template <test_Tsint Ts>
 static constexpr
 Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std::float_round_style s)
 {
@@ -476,7 +465,7 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std:
     return condNeg(absQ, qNeg);
 }
 
-template <std::unsigned_integral T>
+template <test_Tuint T>
 static constexpr
 std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
 {

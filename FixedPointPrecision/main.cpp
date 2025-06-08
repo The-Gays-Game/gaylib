@@ -14,6 +14,6 @@ void test0()
 }
 int main()
 {
-    test0();
-    std::cout<<(condNeg<int>(1,true));
+    ufx<unsigned __int128, 128>a(1,true);
+    std::cout<<float(a);
 }
