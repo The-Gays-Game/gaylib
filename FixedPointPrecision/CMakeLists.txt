@@ -13,7 +13,7 @@ target_sources(fixed
         FILE_SET CXX_MODULES FILES
             fixed.cxx)
 target_compile_options(fixed PUBLIC
-		#-fsanitize=undefined -fsanitize=shift -fsanitize=signed-integer-overflow
+		-fsanitize=undefined -fsanitize=shift -fsanitize=signed-integer-overflow
 )
 add_executable(test main.cpp)
 target_link_libraries(test PRIVATE fixed)

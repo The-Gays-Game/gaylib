@@ -150,8 +150,12 @@ struct aint_dt
     template<test_Tint T> requires (std::is_signed_v<T> ==std::is_signed_v<Ta>&&(std::numeric_limits<Ta>::digits+std::numeric_limits<Tu>::digits>=std::numeric_limits<T>::digits) )
     constexpr
     explicit aint_dt(T v)
-        noexcept : h(v >> std::numeric_limits<T>::digits), l(v)
+        noexcept :  l(v)
     {
+        if (std::is_signed_v<T>)
+            h=v>>std::numeric_limits<T>::digits;
+        else
+            h=v>>(std::numeric_limits<T>::digits-1)>>1;
     }
 
     constexpr
@@ -310,7 +314,7 @@ aint_dt<T> wideMul(const T a, const T b)
     c1 += aL * bH;
 
     T eH = aH * bH + c2 + (c1 >> halfWidth);
-    Tu eL = Tu(a) * Tu(b);
+    Tu eL = std::common_type_t<Tu,unsigned int>(a) * b;//unfortunately if we have uint16_t*uint16_t can overflow int32
     return {eH, eL};
 }
 
@@ -468,7 +472,7 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std:
 
 template <test_Tuint T>
 static constexpr
-std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
+std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
 {
 #ifdef debug_arithmetic
     if (divisor == 0)

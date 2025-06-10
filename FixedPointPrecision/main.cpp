@@ -15,7 +15,12 @@ void test0()
 }
 int main()
 {
-    ufx<unsigned __int128, 128>a(0b1,true);
-    double b=a;
+    ufx<unsigned __int128, 128,std::round_to_nearest>a(0xfffffffff,true);
+    float b=a;
+    std::cout<<testSize<unsigned __int128,128><<std::endl;
     std::cout<<b<<" "<<std::isnormal(std::ldexp(1,-128))<<std::endl;
+    int32_t e=std::numeric_limits<int32_t>::max();
+    e<<=31;
+    using C=std::common_type_t<int64_t,uint16_t>;
+    std::cout<<e<<std::endl;
 }

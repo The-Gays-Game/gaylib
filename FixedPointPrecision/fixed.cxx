@@ -32,7 +32,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
         if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm && more > 0)
         {
             //with radix<=128, sd<=128, then sd<=2 needs no rounding.
-            v = aint_dt<B>(v).narrowArsRnd(more, S);
+            v = aint_dt<B>(v).narrowArsRnd(more, S);//TODO: fix UB for unsigned in constructor
             radix -= more;
             return std::ldexp(v, -int8_t(radix));
         }
