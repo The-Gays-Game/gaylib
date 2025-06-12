@@ -6,6 +6,7 @@
 #include<limits>
 #include<tuple>
 #include<bit>
+#include<cstdlib>
 #include<version>
 #ifdef debug_arithmetic
 #include<stdexcept>
@@ -261,7 +262,7 @@ struct aint_dt
                 {
                     //tie to even
                     Tu special = eucQ & 1;
-                    Tu halfDivisor = 1 << by - 1;
+                    Tu halfDivisor = Tu{1} << by - 1;
                     return eucQ + (mod > halfDivisor - special);
                 }
             default:
@@ -278,7 +279,7 @@ struct aint_dt
                 return eucQ + (mod != 0 && h < 0);
             case std::round_to_nearest:
                 {
-                    Tu halfDivisor = 1 << by - 1;
+                    Tu halfDivisor = Tu{1} << by - 1;
 
                     //when h>0, +half to round near tie away. when h<0, << is round down, add half for round near tie to 0, then -1 for tie away.
                     Tu qNeg = Tu(h) >> std::numeric_limits<Ta>::digits;

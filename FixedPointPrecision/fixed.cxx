@@ -24,7 +24,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
             sd = std::numeric_limits<B>::digits - std::countl_zero(v);
         else
         {
-            std::make_unsigned_t<B> av = abs(v);
+            auto av=condNeg<std::make_unsigned_t<B>>(v,v<0);
             sd = std::numeric_limits<decltype(av)>::digits - std::countl_zero(av);
         }
 
@@ -74,11 +74,10 @@ export
         }
 
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
-        template <std::floating_point F>
 #ifdef FP_MANIP_CE
         constexpr
 #endif
-        explicit ufx(F v)
+        explicit ufx(std::floating_point auto v)
             noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix))
         {
         }
@@ -223,11 +222,10 @@ export
                 repr <<= Radix;
         }
 
-        template <std::floating_point F>
 #ifdef FP_MANIP_CE
         constexpr
 #endif
-        explicit fx(F v)
+        explicit fx(std::floating_point auto v)
             noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix))
         {
         }
