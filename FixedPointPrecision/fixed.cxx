@@ -32,7 +32,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
         if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm && more > 0)
         {
             //with radix<=128, sd<=128, then sd<=2 needs no rounding.
-            v = aint_dt<B>(v).narrowArsRnd(more, S);
+            v = aint_dt<typename rankOf<B>::half>(v).narrowArsRnd(more, S);
             radix -= more;
             return std::ldexp(v, -int8_t(radix));
         }
@@ -108,7 +108,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt<Bone>(0, repr).narrowArsRnd(Radix, std::round_toward_zero);;
+            return aint_dt<Bone>(0, repr).narrowArsRnd(Radix, std::round_toward_zero);
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -157,8 +157,8 @@ export
                 repr *= o.repr;
             else if constexpr(requires { typename rankOf<Bone>::two; })
             {
-                auto a = typename rankOf<Bone>::two(repr) * o.repr;
-                repr = aint_dt<typename rankOf<Bone>::two>(0, a).narrowArsRnd(Radix, Style);
+                typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
+                repr = aint_dt<Bone>(a).narrowArsRnd(Radix, Style);
             }
             else
             {
@@ -245,7 +245,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix < P1)
-                repr = aint_dt(repr).narrowArsRnd(P1 - Radix, Style);
+                repr = aint_dt<Bone>(repr).narrowArsRnd(P1 - Radix, Style);
         }
 
         auto operator <=>(const fx&) const = default;
@@ -269,7 +269,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt(repr).narrowArsRnd(Radix, std::round_toward_zero);
+            return aint_dt<Bone>(repr).narrowArsRnd(Radix, std::round_toward_zero);
         }
 
         template <std::floating_point F>
@@ -313,7 +313,7 @@ export
             else if constexpr (requires { typename rankOf<Bone>::two; })
             {
                 typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
-                repr = aint_dt(a).narrowArsRnd(Radix, Style);
+                repr = aint_dt<Bone>(a).narrowArsRnd(Radix, Style);
             }
             else
             {

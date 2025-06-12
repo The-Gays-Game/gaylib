@@ -13,8 +13,7 @@ void test0()
 
     std::cout<<int16_t(c)<<" "<<std::endl;
 }
-int main()
-{
+void test1() {
     fx<__int128, 127,std::round_to_nearest>a(0.000001f);
     float b=a;
     std::cout<<testSize<__int128,127><<std::endl;
@@ -23,4 +22,11 @@ int main()
     e<<=31;
     using C=std::common_type_t<int64_t,uint16_t>;
     std::cout<<divRnd(e,e,std::round_to_nearest)<<std::endl;
+}
+int main()
+{
+    fx<int16_t,1> a(1,true);
+    int16_t b=0;
+    using A=rankOf<uint8_t>::two;
+    std::cout<<std::bit_cast<int16_t>(a)<<std::endl;
 }

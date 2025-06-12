@@ -151,7 +151,7 @@ struct aint_dt
     template<test_Tint T> requires (std::is_signed_v<T> ==std::is_signed_v<Ta>&&(std::numeric_limits<Ta>::digits+std::numeric_limits<Tu>::digits>=std::numeric_limits<T>::digits) )
     constexpr
     explicit aint_dt(T v)
-        noexcept :  l(v)
+        noexcept:  l(v)
     {
         if (std::is_signed_v<T>)
             h=v>>std::numeric_limits<T>::digits;
@@ -302,8 +302,8 @@ static constexpr
 aint_dt<T> wideMul(const T a, const T b)
     noexcept(std::is_unsigned_v<T>)
 {
-    using Tu = typename aint_dt<T>::Tu;
-    using Th = typename rankOf<Tu>::half;
+    using Tu = aint_dt<T>::Tu;
+    using Th = rankOf<Tu>::half;
     constexpr T halfWidth = std::numeric_limits<Th>::digits;
 
     const T aL = Th(a), aH = a >> halfWidth;
@@ -323,7 +323,7 @@ template <test_Tint T>
 static constexpr
 aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 {
-    using Tu = typename aint_dt<T>::Tu;
+    using Tu = aint_dt<T>::Tu;
 #ifdef debug_arithmetic
     if (by == 0)
         throw std::domain_error("can't shift by 0");
@@ -355,7 +355,7 @@ std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume norma
 #elif __has_builtin(__builtin_assume)
     __builtin_assume(__builtin_clzg(divisor)==0&&dividend.h<divisor);
 #endif
-    using Th = typename rankOf<T>::half;
+    using Th = rankOf<T>::half;
     constexpr uint8_t halfWidth = std::numeric_limits<Th>::digits;
 
     const aint_dt<Th> divisorSplit(divisor), dividendLSplit(dividend.l);
