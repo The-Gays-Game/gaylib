@@ -45,7 +45,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
  *  what operators are explicit:
  *      cause 100% loss of information.
  *      can cause undefined behaviors.
- *      doesn't preserve original arithmatic meanings.
+ *      doesn't preserve original arithmetic meanings.
  *  what operations aren't supported?
  *      have ambiguous meanings.
  *      uses explicit operators.
@@ -63,14 +63,9 @@ export
 
         //v's arithmatic meaning changes when Radix!=0
         constexpr
-        explicit ufx(Bone v, bool raw = false)
-            noexcept: repr(v)
+        explicit ufx(Bone v)
+            noexcept: repr(Radix < std::numeric_limits<Bone>::digits?v<<Radix:0)
         {
-            if (!raw)
-                if (Radix < std::numeric_limits<Bone>::digits)
-                    repr <<= Radix;
-                else
-                    repr = 0;
         }
 
         //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
@@ -215,11 +210,9 @@ export
         Bone repr; //c++20 defined bit shift on signed integers, right shift additionally comes with sign extending.
 
         constexpr
-        explicit fx(Bone v, bool raw = false)
-            noexcept: repr(v)
+        explicit fx(Bone v)
+            noexcept: repr(v<<Radix)
         {
-            if (!raw)
-                repr <<= Radix;
         }
 
 #ifdef FP_MANIP_CE

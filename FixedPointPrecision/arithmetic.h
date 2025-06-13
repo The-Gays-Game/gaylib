@@ -248,7 +248,11 @@ struct aint_dt
     Ta narrowArsRnd(const uint8_t by, const std::float_round_style s) const
     {
         const Ta eucQ = (*this >> by).l;
+#if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
+        if (__builtin_expect_with_probability(by==0,true,1./std::numeric_limits<Ta>::digits))
+#else
         if (by == 0)
+#endif
             return eucQ;
         const Tu modder = std::numeric_limits<Tu>::max() >> std::numeric_limits<Tu>::digits - by;
         Tu mod = l & modder;
@@ -330,7 +334,19 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 #elif __has_builtin(__builtin_assume)
     __builtin_assume(by>0);
 #endif
+#if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
+    constexpr double prob=[]()consteval{
+        constexpr uint8_t d=std::numeric_limits<T>::digits;
+        uint16_t can=0;
+        for (uint8_t i=1;i<=d;++i)
+            can+=std::max<int16_t>(i+1+d-std::numeric_limits<Tu>::digits,0);
+        return static_cast<double>(can)/(d*(d+1));
+    }();
+    if (__builtin_expect_with_probability(by >= std::numeric_limits<Tu>::digits,true,prob))
+#else
     if (by >= std::numeric_limits<Tu>::digits)
+#endif
+
     {
         T h = a << by - std::numeric_limits<Tu>::digits;
         return {h, 0};
