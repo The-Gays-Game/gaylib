@@ -32,9 +32,9 @@
 #endif
 
 #ifdef __SIZEOF_INT128__
-template<class T> concept all_int=std::integral<T>||std::same_as<T,__int128>||std::same_as<T,unsigned __int128>;
-template<class T>concept all_uint=std::unsigned_integral<T>||std::same_as<T,unsigned __int128>;
-template<class T>concept all_sint=std::signed_integral<T>||std::same_as<T,__int128>;
+template <class T> concept all_int = std::integral<T> || std::same_as<T, __int128> || std::same_as<T, unsigned __int128>;
+template <class T>concept all_uint = std::unsigned_integral<T> || std::same_as<T, unsigned __int128>;
+template <class T>concept all_sint = std::signed_integral<T> || std::same_as<T, __int128>;
 #define test_Tint all_int
 #define test_Tuint all_uint
 #define test_Tsint all_sint
@@ -148,24 +148,24 @@ struct aint_dt
     {
     }
 
-    template<test_Tint T> requires (std::is_signed_v<T> ==std::is_signed_v<Ta>&&(std::numeric_limits<Ta>::digits+std::numeric_limits<Tu>::digits>=std::numeric_limits<T>::digits) )
+    template <test_Tint T> requires (std::is_signed_v<T> == std::is_signed_v<Ta> && (std::numeric_limits<Ta>::digits + std::numeric_limits<Tu>::digits >= std::numeric_limits<T>::digits))
     constexpr
     explicit aint_dt(T v)
-        noexcept:  l(v)
+        noexcept: l(v)
     {
         if (std::is_signed_v<T>)
-            h=v>>std::numeric_limits<T>::digits;
+            h = v >> std::numeric_limits<T>::digits;
         else
-            h=v>>(std::numeric_limits<T>::digits-1)>>1;
+            h = v >> (std::numeric_limits<T>::digits - 1) >> 1;
     }
 
     constexpr
     auto merge
 #if defined(__GNUG__)||defined(__clang__)
-[[gnu::artificial]]
+    [[gnu::artificial]]
 #endif
-    ()const
-    noexcept requires requires {typename rankOf<Ta>::two;}
+    () const
+        noexcept requires requires { typename rankOf<Ta>::two; }
     {
         constexpr uint8_t width = std::numeric_limits<Tu>::digits;
         return typename rankOf<Ta>::two(typename rankOf<Ta>::two(h) << width | l);
@@ -249,7 +249,7 @@ struct aint_dt
     {
         const Ta eucQ = (*this >> by).l;
 #if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
-        if (__builtin_expect_with_probability(by==0,true,1./std::numeric_limits<Ta>::digits))
+        if (__builtin_expect_with_probability(by == 0, true, 1. / std::numeric_limits<Ta>::digits))
 #else
         if (by == 0)
 #endif
@@ -319,7 +319,7 @@ aint_dt<T> wideMul(const T a, const T b)
     c1 += aL * bH;
 
     T eH = aH * bH + c2 + (c1 >> halfWidth);
-    Tu eL = std::common_type_t<Tu,unsigned int>(a) * b;//unfortunately if we have uint16_t*uint16_t can overflow int32
+    Tu eL = std::common_type_t<Tu, unsigned int>(a) * b; //unfortunately if we have uint16_t*uint16_t can overflow int32
     return {eH, eL};
 }
 
@@ -335,14 +335,15 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
     __builtin_assume(by>0);
 #endif
 #if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
-    constexpr double prob=[]()consteval{
-        constexpr uint8_t d=std::numeric_limits<T>::digits;
-        uint16_t can=0;
-        for (uint8_t i=1;i<=d;++i)
-            can+=std::max<int16_t>(i+1+d-std::numeric_limits<Tu>::digits,0);
-        return static_cast<double>(can)/(d*(d+1));
+    constexpr double prob = []()consteval
+    {
+        constexpr uint16_t d = std::numeric_limits<T>::digits;
+        uint16_t can = 0;
+        for (uint8_t i = 1; i <= d; ++i)
+            can += i + 1 + d - std::numeric_limits<Tu>::digits;
+        return static_cast<double>(can) / (d * (d + 1));
     }();
-    if (__builtin_expect_with_probability(by >= std::numeric_limits<Tu>::digits,true,prob))
+    if (__builtin_expect_with_probability(by >= std::numeric_limits<Tu>::digits, true, prob))
 #else
     if (by >= std::numeric_limits<Tu>::digits)
 #endif
@@ -489,7 +490,7 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std:
 
 template <test_Tuint T>
 static constexpr
-std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
+std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T>& dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
 {
 #ifdef debug_arithmetic
     if (divisor == 0)

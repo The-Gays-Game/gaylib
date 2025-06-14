@@ -16,20 +16,27 @@ constexpr
 F toF(B v, uint8_t radix, std::float_round_style S)
     noexcept(noexcept(std::ldexp(v, int{})))
 {
-    using nl= std::numeric_limits<F>;
-    if (std::numeric_limits<B>::digits > nl::digits)
+    using nl = std::numeric_limits<F>;
+    constexpr uint8_t d = std::numeric_limits<B>::digits;
+    if (d > nl::digits)
     {
         uint8_t sd;
         if constexpr (std::is_unsigned_v<B>)
-            sd = std::numeric_limits<B>::digits - std::countl_zero(v);
+            sd = d - std::countl_zero(v);
         else
         {
-            auto av=condNeg<std::make_unsigned_t<B>>(v,v<0);
+            auto av = condNeg<std::make_unsigned_t<B>>(v, v < 0);
             sd = std::numeric_limits<decltype(av)>::digits - std::countl_zero(av);
         }
 
-        bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd-radix) <= nl::min_exponent - 1;
-        if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm && more > 0)
+        bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd - radix) <= nl::min_exponent - 1;
+        if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm &&
+#if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
+            __builtin_expect_with_probability(more > 0, true, (d - nl::digits) / static_cast<double>(d))
+#else
+            more > 0
+#endif
+        )
         {
             //with radix<=128, sd<=128, then sd<=2 needs no rounding.
             v = aint_dt<typename rankOf<B>::half>(v).narrowArsRnd(more, S);
@@ -61,10 +68,10 @@ export
     {
         Bone repr;
 
-        //v's arithmatic meaning changes when Radix!=0
+        //can overflow to 0 when Radix==digits.
         constexpr
         explicit ufx(Bone v)
-            noexcept: repr(Radix < std::numeric_limits<Bone>::digits?v<<Radix:0)
+            noexcept: repr(Radix < std::numeric_limits<Bone>::digits ? v << Radix : 0)
         {
         }
 
@@ -150,7 +157,7 @@ export
         {
             if (Radix == 0)
                 repr *= o.repr;
-            else if constexpr(requires { typename rankOf<Bone>::two; })
+            else if constexpr (requires { typename rankOf<Bone>::two; })
             {
                 typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
                 repr = aint_dt<Bone>(a).narrowArsRnd(Radix, Style);
@@ -201,7 +208,7 @@ export
         }
     };
 
-    template <test_Tsint Bone, uint8_t Radix, std::float_round_style Style =std:: round_toward_zero> requires testSize<Bone, Radix>
+    template <test_Tsint Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix>
     class fx
     {
         using U = std::make_unsigned_t<Bone>;
@@ -211,7 +218,7 @@ export
 
         constexpr
         explicit fx(Bone v)
-            noexcept: repr(v<<Radix)
+            noexcept: repr(v << Radix)
         {
         }
 

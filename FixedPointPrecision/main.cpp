@@ -25,8 +25,8 @@ void test1() {
 }
 int main()
 {
-    auto a=std::bit_cast<fx<int16_t,1>>(int16_t(5));
-    a=std::bit_cast<decltype(a)>(int16_t(5));
+    auto a=std::bit_cast<fx<int64_t,1>>(int64_t(5));
+    a=std::bit_cast<decltype(a)>(int64_t(5));
     using A=rankOf<uint8_t>::two;
-    std::cout<<wideLS(2,3).merge()<<std::endl;
+    std::cout<<wideLS(2,3).merge()<<" "<<float(a)<<std::endl;
 }
