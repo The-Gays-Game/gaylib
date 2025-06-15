@@ -1,7 +1,5 @@
 #pragma once
 
-#define debug_arithmetic
-
 #include<cstdint>
 #include<limits>
 #include<tuple>
@@ -45,7 +43,7 @@ template <class T>concept all_sint = std::signed_integral<T> || std::same_as<T, 
 #endif
 
 template <test_Tint T>
-static constexpr
+constexpr
 T condNeg
 #if defined(__GNUG__)||defined(__clang__)
 [[gnu::hot]]
@@ -302,7 +300,7 @@ struct aint_dt
 };
 
 template <test_Tint T>
-static constexpr
+constexpr
 aint_dt<T> wideMul(const T a, const T b)
     noexcept(std::is_unsigned_v<T>)
 {
@@ -324,7 +322,7 @@ aint_dt<T> wideMul(const T a, const T b)
 }
 
 template <test_Tint T>
-static constexpr
+constexpr
 aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 {
     using Tu = aint_dt<T>::Tu;
@@ -361,7 +359,7 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 }
 
 template <test_Tuint T>
-static constexpr
+constexpr
 std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume normalized*/ divisor)
 {
 #ifdef debug_arithmetic
@@ -404,7 +402,7 @@ std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume norma
 }
 
 template <test_Tuint Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor>>
-static constexpr
+constexpr
 Tdivisor divRnd(const Tdividend& dividend, const Tdivisor divisor, const std::float_round_style s)
 {
     Tdivisor q, r;
@@ -431,7 +429,6 @@ Tdivisor divRnd(const Tdividend& dividend, const Tdivisor divisor, const std::fl
 }
 
 template <test_Tsint Ts>
-static
 #ifdef INT_ABS_CE
 #define S_DIVR_CE
 constexpr
@@ -457,7 +454,7 @@ Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s)
 }
 
 template <test_Tsint Ts>
-static constexpr
+constexpr
 Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std::float_round_style s)
 {
     using Tu = typename aint_dt<Ts>::Tu;
