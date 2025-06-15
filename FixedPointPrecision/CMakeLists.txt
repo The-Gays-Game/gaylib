@@ -14,10 +14,9 @@ target_sources(fixed
 
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	set(flags "-fsanitize=undefined -fsanitize=shift -fsanitize=signed-integer-overflow
-	 -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses")
+	set(flags -fsanitize=undefined -fsanitize=shift -fsanitize=signed-integer-overflow -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	set(flags "-Wno-parentheses")
+	set(flags -Wno-parentheses)
 else()
 	set(flags "")
 endif()
@@ -29,7 +28,7 @@ target_compile_options(
 add_executable(demo main.cpp)
 target_link_libraries(demo PRIVATE fixed)
 
-find_package(Catch2 3 REQUIRED)
+#find_package(Catch2 3 REQUIRED)
 
 #add_executable(tests test_ari.cpp)
 #target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
