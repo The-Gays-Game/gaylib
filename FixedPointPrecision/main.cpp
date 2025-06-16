@@ -25,8 +25,7 @@ void test1() {
 }
 int main()
 {
-    auto a=std::bit_cast<fx<int64_t,1>>(int64_t(5));
-    a=std::bit_cast<decltype(a)>(int64_t(5));
-    using A=rankOf<uint8_t>::two;
-    std::cout<<wideLS(2,3).merge()<<" "<<float(a)<<std::endl;
+    int a=std::numeric_limits<int>::max();
+    typename rankOf<int>::two b=wideMul(-1,a).merge();
+    std::cout<<b;
 }

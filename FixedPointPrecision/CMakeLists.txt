@@ -14,7 +14,7 @@ target_sources(fixed
 
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	set(flags -fsanitize=undefined -fsanitize=shift -fsanitize=signed-integer-overflow -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses)
+	set(flags -fsanitize=undefined,shift,signed-integer-overflow -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	set(flags -Wno-parentheses)
 else()
@@ -28,8 +28,22 @@ target_compile_options(
 add_executable(demo main.cpp)
 target_link_libraries(demo PRIVATE fixed)
 
-#find_package(Catch2 3 REQUIRED)
+Include(FetchContent)
+FetchContent_Declare(
+		Catch2
+		GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+		GIT_TAG        v3.8.1
+)
+FetchContent_MakeAvailable(Catch2)
 
-#add_executable(tests test_ari.cpp)
-#target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
-#target_link_libraries(tests PRIVATE fixed)
+add_executable(tests test_ari.cpp)
+target_compile_options(
+		tests PUBLIC
+		-fsanitize-trap=all
+)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE fixed)
+
+include(CTest)
+include(Catch)
+catch_discover_tests(tests)

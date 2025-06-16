@@ -306,18 +306,19 @@ aint_dt<T> wideMul(const T a, const T b)
 {
     using Tu = aint_dt<T>::Tu;
     using Th = rankOf<Tu>::half;
+    using Tm=std::common_type_t<Tu, unsigned int>;
     constexpr T halfWidth = std::numeric_limits<Th>::digits;
 
     const T aL = Th(a), aH = a >> halfWidth;
     const T bL = Th(b), bH = b >> halfWidth;
 
-    T d = aH * bL + (aL * bL >> halfWidth);
+    T d = aH * bL + (Tm(aL) * bL >> halfWidth);
     T c1 = Th(d);
     T c2 = d >> halfWidth;
     c1 += aL * bH;
 
     T eH = aH * bH + c2 + (c1 >> halfWidth);
-    Tu eL = std::common_type_t<Tu, unsigned int>(a) * b; //unfortunately if we have uint16_t*uint16_t can overflow int32
+    Tu eL = Tm(a) * b; //unfortunately if we have uint16_t*uint16_t can overflow int32
     return {eH, eL};
 }
 
