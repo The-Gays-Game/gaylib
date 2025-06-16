@@ -4,11 +4,54 @@
 #include<vector>
 #include<cstdint>
 #include<ranges>
+#include<stdexcept>
 
 namespace fpp_tests::arithmetic
 {
     namespace
     {
+        template<test_Tint T>
+        std::vector<typename rankOf<T>::two> sampleAint()noexcept {
+            using Tt=typename rankOf<T>::two;
+            std::vector<aint_dt<T>>r;
+            if constexpr (std::is_integral_v<T>) {
+                using Tu = std::make_unsigned_t<T>;
+                constexpr T N = T{1} << (std::numeric_limits<Tu>::digits / 4 - 1);
+                for (T i = 0; i < N; ++i)
+                {
+                    r.emplace_back(std::numeric_limits<Tt>::min() + i);
+                    r.emplace_back(std::numeric_limits<Tt>::max() - i);
+                }
+                for (Tt i=1;i<=N*2;++i) {
+                    r.emplace_back(i<<std::numeric_limits<Tu>::digits / 4);
+                    r.emplace_back((-i)<<std::numeric_limits<Tu>::digits / 4);
+                }
+                for (T i = 1; i < N; ++i)
+                {
+                    r.emplace_back(i);
+                    r.emplace_back(-i);
+                }
+                r.emplace_back(Tt{0});
+            }else {
+                constexpr T N = T{1} << (std::numeric_limits<T>::digits / 4 );
+                for (T i=0;i<N;++i) {
+                    r.emplace_back(i);
+                    r.emplace_back(std::numeric_limits<Tt>::max() - i);
+                }
+                for (Tt i=1;i<=2*N;++i) {
+                    r.emplace_back(i<<std::numeric_limits<Tt>::digits / 4);
+                }
+            }
+            r.shrink_to_fit();
+            return r;
+        }
+        const
+        template <test_Tuint Tu>
+        std::vector<Tu> sampleNDiv()noexcept {
+            std::vector<Tu> r;
+            constexpr Tu N = Tu{1} << std::numeric_limits<Tu>::digits / 2;
+
+        }
         template <test_Tint T>
         std::vector<T> sample() noexcept
         {
@@ -58,7 +101,7 @@ namespace fpp_tests::arithmetic
 
         constexpr
         CartIter(T0&& it0b, T0&& it0e, T1&& it1b, T1&& it1e)
-            noexcept: b0(it0b), e0(it0e), c1(it1b), e1(it1e)
+            noexcept: b0(it0b), e0(it0e), e1(it1e), c1(it1b)
         {
             c0 = b0;
         }
@@ -134,6 +177,11 @@ namespace fpp_tests::arithmetic
                 Tt y = wideLS(l, r).merge();
                 REQUIRE(t==y);
             }
+            REQUIRE_THROWS_AS(wideLS(0,0),std::domain_error);
+        }
+        const auto aintSamples=sampleAint<TestType>();
+        SECTION("uNarrow211Div") {
+
         }
     }
 
