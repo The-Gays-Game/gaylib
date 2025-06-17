@@ -154,8 +154,11 @@ struct aint_dt
     {
         if (std::is_signed_v<T>)
             h = v >> std::min(std::numeric_limits<T>::digits, std::numeric_limits<Tu>::digits);
-        else if (std::numeric_limits<Tu>::digits < std::numeric_limits<T>::digits)
-            h = v >> std::numeric_limits<Tu>::digits;
+        else
+            if (std::numeric_limits<Tu>::digits < std::numeric_limits<T>::digits)
+                h = v >> std::numeric_limits<Tu>::digits;
+            else
+                h=0;
     }
 
     constexpr
@@ -175,7 +178,6 @@ struct aint_dt
         noexcept(std::is_unsigned_v<Ta>)
     {
         Tu co;
-        bool done = true;
 #ifdef __clang__
         if constexpr (std::is_same_v<Tu, unsigned char>)
             l = __builtin_addcb(l, b, 0, &co);
@@ -187,8 +189,7 @@ struct aint_dt
             l = __builtin_addcl(l, b, 0, &co);
         else if constexpr (std::is_same_v<Tu, unsigned long long>)
             l = __builtin_addcll(l, b, 0, &co);
-        else
-            done = false;
+        else{
 #elif defined(__GNUG__)
         if constexpr(std::is_same_v<Tu,unsigned int>)
             l=__builtin_addc(l,b,0,&co);
@@ -196,11 +197,8 @@ struct aint_dt
             l=__builtin_addcl(l,b,0,&co);
         else if constexpr(std::is_same_v<Tu,unsigned long long int>)
             l=__builtin_addcll(l,b,0,&co);
-        else
-            done=false;
+        else{
 #endif
-        if (!done)
-        {
             Tu s = l + b;
             co = (l & b | (l | b) & ~s) >> std::numeric_limits<Tu>::digits - 1;
             l = s;

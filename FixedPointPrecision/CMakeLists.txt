@@ -38,11 +38,13 @@ set(CATCH_CONFIG_WINDOWS_CRTDBG ON)
 set(CATCH_BUILD_TESTING OFF)
 set(CATCH_CONFIG_WINDOWS_SEH ON)
 FetchContent_MakeAvailable(Catch2)
-
+#configure_file(${catch2_SOURCE_DIR}/extras/gdbinit ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit)
 add_executable(tests test_ari.cpp)
 target_compile_options(
 		tests PUBLIC
 		-frounding-math
+		-Wall -Wextra
+		${flags}
 )
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(tests PRIVATE fixed)

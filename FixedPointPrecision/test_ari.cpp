@@ -196,6 +196,20 @@ namespace fpp_tests::arithmetic
             }
             REQUIRE_THROWS_AS(wideLS(0,0), std::domain_error);
         }
+        SECTION("aint_dt op+=") {
+            for (const auto &l:samples) {
+                using Th=typename rankOf<TestType>::half;
+                const TestType a=std::min<Tt>(Tt{std::numeric_limits<TestType>::max()}-l,std::numeric_limits<std::make_unsigned_t<Th>>::max())+1;
+                for (TestType r=0;r<a;++r) {
+                    CAPTURE(l,r);
+                    TestType t=l+r;
+                    aint_dt<Th> b(l);
+                    b+=r;
+                    TestType y=b.merge();
+                    REQUIRE(t==y);
+                }
+            }
+        }
         if constexpr (std::is_unsigned_v<TestType>)
         {
             SECTION("u212Div")
@@ -216,7 +230,6 @@ namespace fpp_tests::arithmetic
             }
         }
     }
-
     TEMPLATE_TEST_CASE("edge", "[wide]", int, unsigned int)
     {
         using Tt = rankOf<TestType>::two;
@@ -235,6 +248,19 @@ namespace fpp_tests::arithmetic
                 Tt yq = a.merge();
                 REQUIRE(tq==yq);
                 REQUIRE(tr==yr);
+            }
+        }
+        SECTION("aint_dt op+=") {
+            using Tu=std::make_unsigned_t<TestType>;
+            for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++it) {
+                const auto [a,b] = *it;
+                Tt l=static_cast<Tt>(a)*b;
+                Tu r=Tu{1}<<std::numeric_limits<Tu>::digits-1;
+                aint_dt<TestType> c(l);
+                c+=r;
+                Tt t=l+r;
+                Tt y=c.merge();
+                REQUIRE(t==y);
             }
         }
         SECTION("wideMul")
@@ -260,5 +286,6 @@ namespace fpp_tests::arithmetic
                 REQUIRE(t==y);
             }
         }
+
     }
 }
