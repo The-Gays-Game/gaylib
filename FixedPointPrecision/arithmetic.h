@@ -5,6 +5,7 @@
 #include<tuple>
 #include<bit>
 #include<cstdlib>
+#include<algorithm>
 #include<version>
 #ifdef debug_arithmetic
 #include<stdexcept>
@@ -152,9 +153,9 @@ struct aint_dt
         noexcept: l(v)
     {
         if (std::is_signed_v<T>)
-            h = v >> std::numeric_limits<T>::digits;
-        else
-            h = v >> (std::numeric_limits<T>::digits - 1) >> 1;
+            h = v >> std::min(std::numeric_limits<T>::digits, std::numeric_limits<Tu>::digits);
+        else if (std::numeric_limits<Tu>::digits < std::numeric_limits<T>::digits)
+            h = v >> std::numeric_limits<Tu>::digits;
     }
 
     constexpr
@@ -306,7 +307,7 @@ aint_dt<T> wideMul(const T a, const T b)
 {
     using Tu = aint_dt<T>::Tu;
     using Th = rankOf<Tu>::half;
-    using Tm=std::common_type_t<Tu, unsigned int>;
+    using Tm = std::common_type_t<Tu, unsigned int>;
     constexpr T halfWidth = std::numeric_limits<Th>::digits;
 
     const T aL = Th(a), aH = a >> halfWidth;

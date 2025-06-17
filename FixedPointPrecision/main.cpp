@@ -25,7 +25,8 @@ void test1() {
 }
 int main()
 {
-    int a=std::numeric_limits<int>::max();
-    typename rankOf<int>::two b=wideMul(-1,a).merge();
-    std::cout<<b;
+    int8_t a=-1;
+    int16_t b=a;
+    uint16_t c=a;
+    std::cout<<int16_t(a)<<" "<<b<<" "<<uint16_t(a)<<std::endl;
 }

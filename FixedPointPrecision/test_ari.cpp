@@ -10,11 +10,13 @@ namespace fpp_tests::arithmetic
 {
     namespace
     {
-        template<test_Tint T>
-        std::vector<typename rankOf<T>::two> sampleAint()noexcept {
-            using Tt=typename rankOf<T>::two;
-            std::vector<aint_dt<T>>r;
-            if constexpr (std::is_integral_v<T>) {
+        template <test_Tint T>
+        std::vector<aint_dt<T>> sampleAint() noexcept
+        {
+            using Tt = typename rankOf<T>::two;
+            std::vector<aint_dt<T>> r;
+            if constexpr (std::is_signed_v<T>)
+            {
                 using Tu = std::make_unsigned_t<T>;
                 constexpr T N = T{1} << (std::numeric_limits<Tu>::digits / 4 - 1);
                 for (T i = 0; i < N; ++i)
@@ -22,36 +24,51 @@ namespace fpp_tests::arithmetic
                     r.emplace_back(std::numeric_limits<Tt>::min() + i);
                     r.emplace_back(std::numeric_limits<Tt>::max() - i);
                 }
-                for (Tt i=1;i<=N*2;++i) {
-                    r.emplace_back(i<<std::numeric_limits<Tu>::digits / 4);
-                    r.emplace_back((-i)<<std::numeric_limits<Tu>::digits / 4);
+                for (Tt i = 1; i <= N * 2; ++i)
+                {
+                    r.emplace_back(i << std::numeric_limits<Tu>::digits / 4);
+                    r.emplace_back((-i) << std::numeric_limits<Tu>::digits / 4);
                 }
                 for (T i = 1; i < N; ++i)
                 {
                     r.emplace_back(i);
-                    r.emplace_back(-i);
+                    r.emplace_back(static_cast<Tt>(-i));
                 }
                 r.emplace_back(Tt{0});
-            }else {
-                constexpr T N = T{1} << (std::numeric_limits<T>::digits / 4 );
-                for (T i=0;i<N;++i) {
+            }
+            else
+            {
+                constexpr T N = T{1} << (std::numeric_limits<T>::digits / 4);
+                for (T i = 0; i < N; ++i)
+                {
                     r.emplace_back(i);
                     r.emplace_back(std::numeric_limits<Tt>::max() - i);
                 }
-                for (Tt i=1;i<=2*N;++i) {
-                    r.emplace_back(i<<std::numeric_limits<Tt>::digits / 4);
+                for (Tt i = 1; i <= 2 * N; ++i)
+                {
+                    r.emplace_back(i << std::numeric_limits<Tt>::digits / 4);
                 }
             }
             r.shrink_to_fit();
             return r;
         }
-        const
-        template <test_Tuint Tu>
-        std::vector<Tu> sampleNDiv()noexcept {
-            std::vector<Tu> r;
-            constexpr Tu N = Tu{1} << std::numeric_limits<Tu>::digits / 2;
 
+        template <test_Tuint Tu>
+        std::vector<Tu> sampleNDiv() noexcept
+        {
+            constexpr uint8_t d = std::numeric_limits<Tu>::digits;
+            constexpr Tu N = Tu{1} << d / 2;
+            std::vector<Tu> r(N * 2);
+            for (Tu i = 0; i < N; ++i)
+            {
+                r[i * 2] = i;
+                r[i * 2 + 1] = std::numeric_limits<std::make_signed_t<Tu>>::max() - i;
+            }
+            for (size_t i = 0; i < r.size(); ++i)
+                r[i] |= Tu{1} << d - 1;
+            return r;
         }
+
         template <test_Tint T>
         std::vector<T> sample() noexcept
         {
@@ -177,20 +194,49 @@ namespace fpp_tests::arithmetic
                 Tt y = wideLS(l, r).merge();
                 REQUIRE(t==y);
             }
-            REQUIRE_THROWS_AS(wideLS(0,0),std::domain_error);
+            REQUIRE_THROWS_AS(wideLS(0,0), std::domain_error);
         }
-        const auto aintSamples=sampleAint<TestType>();
-        SECTION("uNarrow211Div") {
-
+        if constexpr (std::is_unsigned_v<TestType>)
+        {
+            SECTION("u212Div")
+            {
+                const std::vector<aint_dt<TestType>> aintSamples = sampleAint<TestType>();
+                const auto nDivSamples = sampleNDiv<TestType>();
+                for (auto it = CartIter(aintSamples.begin(), aintSamples.end(), nDivSamples.begin(), nDivSamples.end()); it != it.end; ++it)
+                {
+                    const auto [l,r] = *it;
+                    Tt a = l.merge();
+                    CAPTURE(a, r);
+                    Tt tq = a / r, tr = a % r;
+                    auto [b,yr] = u212Div(l, r);
+                    Tt yq = b.merge();
+                    REQUIRE(tq==yq);
+                    REQUIRE(tr==yr);
+                }
+            }
         }
     }
 
     TEMPLATE_TEST_CASE("edge", "[wide]", int, unsigned int)
     {
+        using Tt = rankOf<TestType>::two;
         std::vector<TestType> samples{std::numeric_limits<TestType>::max()};
         if constexpr (std::is_signed_v<TestType>)
             samples.emplace_back(std::numeric_limits<TestType>::min());
-        using Tt = rankOf<TestType>::two;
+        else
+        {
+            SECTION("u212Div")
+            {
+                Tt dividend = std::numeric_limits<Tt>::max();
+                TestType divisor = TestType{1} << std::numeric_limits<TestType>::digits - 1;
+                CAPTURE(dividend, divisor);
+                Tt tq = dividend / divisor, tr = dividend % divisor;
+                auto [a,yr] = u212Div(aint_dt<TestType>(dividend), divisor);
+                Tt yq = a.merge();
+                REQUIRE(tq==yq);
+                REQUIRE(tr==yr);
+            }
+        }
         SECTION("wideMul")
         {
             for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++it)
