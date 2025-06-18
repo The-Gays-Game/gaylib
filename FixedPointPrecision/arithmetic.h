@@ -133,6 +133,8 @@ struct rankOf<__int128>
 };
 #endif
 
+template<class T>using NL=std::numeric_limits<T>;
+
 template <test_Tint Ta>
 struct aint_dt
 {
@@ -147,16 +149,16 @@ struct aint_dt
     {
     }
 
-    template <test_Tint T> requires (std::is_signed_v<T> == std::is_signed_v<Ta> && (std::numeric_limits<Ta>::digits + std::numeric_limits<Tu>::digits >= std::numeric_limits<T>::digits))
+    template <test_Tint T> requires (std::is_signed_v<T> == std::is_signed_v<Ta> && (NL<Ta>::digits + NL<Tu>::digits >= NL<T>::digits))
     constexpr
     explicit aint_dt(T v)
         noexcept: l(v)
     {
         if (std::is_signed_v<T>)
-            h = v >> std::min(std::numeric_limits<T>::digits, std::numeric_limits<Tu>::digits);
+            h = v >> std::min(NL<T>::digits, NL<Tu>::digits);
         else
-            if (std::numeric_limits<Tu>::digits < std::numeric_limits<T>::digits)
-                h = v >> std::numeric_limits<Tu>::digits;
+            if (NL<Tu>::digits < NL<T>::digits)
+                h = v >> NL<Tu>::digits;
             else
                 h=0;
     }
@@ -169,7 +171,7 @@ struct aint_dt
     () const
         noexcept requires requires { typename rankOf<Ta>::two; }
     {
-        constexpr uint8_t width = std::numeric_limits<Tu>::digits;
+        constexpr uint8_t width = NL<Tu>::digits;
         return typename rankOf<Ta>::two(typename rankOf<Ta>::two(h) << width | l);
     }
 
@@ -200,7 +202,7 @@ struct aint_dt
         else{
 #endif
             Tu s = l + b;
-            co = (l & b | (l | b) & ~s) >> std::numeric_limits<Tu>::digits - 1;
+            co = (l & b | (l | b) & ~s) >> NL<Tu>::digits - 1;
             l = s;
         }
         h += co;
@@ -217,7 +219,7 @@ struct aint_dt
     constexpr
     aint_dt& operator >>=(uint8_t by)
     {
-        if (constexpr uint8_t ud=std::numeric_limits<Tu>::digits; by<ud) {
+        if (constexpr uint8_t ud=NL<Tu>::digits; by<ud) {
             l>>=by;
             const uint8_t a=ud-by;
             l|=h<<(a-1)<<1;
@@ -226,7 +228,7 @@ struct aint_dt
             by-=ud;
             l=h>>by;
             if (std::is_signed_v<Ta>)
-                h>>=std::numeric_limits<Ta>::digits;
+                h>>=NL<Ta>::digits;
             else
                 h=0;
         }
@@ -244,12 +246,12 @@ struct aint_dt
     {
         const Ta eucQ = (*this >> by).l;
 #if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
-        if (__builtin_expect_with_probability(by == 0, true, 1. / std::numeric_limits<Ta>::digits))
+        if (__builtin_expect_with_probability(by == 0, true, 1. / NL<Ta>::digits))
 #else
         if (by == 0)
 #endif
             return eucQ;
-        const Tu modder = std::numeric_limits<Tu>::max() >> std::numeric_limits<Tu>::digits - by;
+        const Tu modder = NL<Tu>::max() >> NL<Tu>::digits - by;
         Tu mod = l & modder;
         if (std::is_unsigned_v<Ta>)
         {
@@ -281,7 +283,7 @@ struct aint_dt
                     Tu halfDivisor = Tu{1} << by - 1;
 
                     //when h>0, +half to round near tie away. when h<0, << is round down, add half for round near tie to 0, then -1 for tie away.
-                    Tu qNeg = Tu(h) >> std::numeric_limits<Ta>::digits;
+                    Tu qNeg = Tu(h) >> NL<Ta>::digits;
                     aint_dt dividend = *this + (halfDivisor - qNeg); //dividend<0: won't overflow. dividend>0: max(dividend)==wideMul(int_min,int_min), max(dividend)+halfDivisor<=int_max.
                     Ta q = (dividend >> by).l;
                     mod = dividend.l + qNeg & modder; //no need for dividend.l&modder first because unsigned arithmetic is mod 2^n.
@@ -304,7 +306,7 @@ aint_dt<T> wideMul(const T a, const T b)
     using Tu = aint_dt<T>::Tu;
     using Th = rankOf<Tu>::half;
     using Tm = std::common_type_t<Tu, unsigned int>;
-    constexpr T halfWidth = std::numeric_limits<Th>::digits;
+    constexpr T halfWidth = NL<Th>::digits;
 
     const T aL = Th(a), aH = a >> halfWidth;
     const T bL = Th(b), bH = b >> halfWidth;
@@ -333,24 +335,24 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 #if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
     constexpr double prob = []()consteval
     {
-        constexpr uint16_t d = std::numeric_limits<T>::digits;
+        constexpr uint16_t d = NL<T>::digits;
         uint16_t can = 0;
         for (uint8_t i = 1; i <= d; ++i)
-            can += i + 1 + d - std::numeric_limits<Tu>::digits;
+            can += i + 1 + d - NL<Tu>::digits;
         return static_cast<double>(can) / (d * (d + 1));
     }();
-    if (__builtin_expect_with_probability(by >= std::numeric_limits<Tu>::digits, true, prob))
+    if (__builtin_expect_with_probability(by >= NL<Tu>::digits, true, prob))
 #else
-    if (by >= std::numeric_limits<Tu>::digits)
+    if (by >= NL<Tu>::digits)
 #endif
 
     {
-        T h = a << by - std::numeric_limits<Tu>::digits;
+        T h = a << by - NL<Tu>::digits;
         return {h, 0};
     }
     else
     {
-        T h = a >> std::numeric_limits<Tu>::digits - by;
+        T h = a >> NL<Tu>::digits - by;
         Tu l = Tu(a) << by;
         return {h, l};
     }
@@ -369,7 +371,7 @@ std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume norma
     __builtin_assume(__builtin_clzg(divisor)==0&&dividend.h<divisor);
 #endif
     using Th = rankOf<T>::half;
-    constexpr uint8_t halfWidth = std::numeric_limits<Th>::digits;
+    constexpr uint8_t halfWidth = NL<Th>::digits;
 
     const aint_dt<Th> divisorSplit(divisor), dividendLSplit(dividend.l);
     aint_dt<Th> q;

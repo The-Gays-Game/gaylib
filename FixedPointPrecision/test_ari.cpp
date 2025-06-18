@@ -18,16 +18,16 @@ namespace fpp_tests::arithmetic
             if constexpr (std::is_signed_v<T>)
             {
                 using Tu = std::make_unsigned_t<T>;
-                constexpr T N = T{1} << (std::numeric_limits<Tu>::digits / 4 - 1);
+                constexpr T N = T{1} << (NL<Tu>::digits / 4 - 1);
                 for (T i = 0; i < N; ++i)
                 {
-                    r.emplace_back(std::numeric_limits<Tt>::min() + i);
-                    r.emplace_back(std::numeric_limits<Tt>::max() - i);
+                    r.emplace_back(NL<Tt>::min() + i);
+                    r.emplace_back(NL<Tt>::max() - i);
                 }
                 for (Tt i = 1; i <= N * 2; ++i)
                 {
-                    r.emplace_back(i << std::numeric_limits<Tu>::digits / 4);
-                    r.emplace_back((-i) << std::numeric_limits<Tu>::digits / 4);
+                    r.emplace_back(i << NL<Tu>::digits / 4);
+                    r.emplace_back((-i) << NL<Tu>::digits / 4);
                 }
                 for (T i = 1; i < N; ++i)
                 {
@@ -38,15 +38,15 @@ namespace fpp_tests::arithmetic
             }
             else
             {
-                constexpr T N = T{1} << (std::numeric_limits<T>::digits / 4);
+                constexpr T N = T{1} << (NL<T>::digits / 4);
                 for (T i = 0; i < N; ++i)
                 {
                     r.emplace_back(i);
-                    r.emplace_back(std::numeric_limits<Tt>::max() - i);
+                    r.emplace_back(NL<Tt>::max() - i);
                 }
                 for (Tt i = 1; i <= 2 * N; ++i)
                 {
-                    r.emplace_back(i << std::numeric_limits<Tt>::digits / 4);
+                    r.emplace_back(i << NL<Tt>::digits / 4);
                 }
             }
             r.shrink_to_fit();
@@ -56,13 +56,13 @@ namespace fpp_tests::arithmetic
         template <test_Tuint Tu>
         std::vector<Tu> sampleNDiv() noexcept
         {
-            constexpr uint8_t d = std::numeric_limits<Tu>::digits;
+            constexpr uint8_t d = NL<Tu>::digits;
             constexpr Tu N = Tu{1} << d / 2;
             std::vector<Tu> r(N * 2);
             for (Tu i = 0; i < N; ++i)
             {
                 r[i * 2] = i;
-                r[i * 2 + 1] = std::numeric_limits<std::make_signed_t<Tu>>::max() - i;
+                r[i * 2 + 1] = NL<std::make_signed_t<Tu>>::max() - i;
             }
             for (size_t i = 0; i < r.size(); ++i)
                 r[i] |= Tu{1} << d - 1;
@@ -76,11 +76,11 @@ namespace fpp_tests::arithmetic
             if constexpr (std::is_signed_v<T>)
             {
                 using Tu = std::make_unsigned_t<T>;
-                constexpr T N = T{1} << (std::numeric_limits<Tu>::digits / 2 - 1);
+                constexpr T N = T{1} << (NL<Tu>::digits / 2 - 1);
                 for (T i = 0; i < N; ++i)
                 {
-                    r.emplace_back(std::numeric_limits<T>::min() + i);
-                    r.emplace_back(std::numeric_limits<T>::max() - i);
+                    r.emplace_back(NL<T>::min() + i);
+                    r.emplace_back(NL<T>::max() - i);
                 }
                 for (T i = 1; i < N; ++i)
                 {
@@ -91,11 +91,11 @@ namespace fpp_tests::arithmetic
             }
             else
             {
-                constexpr T N = T{1} << std::numeric_limits<T>::digits / 2;
+                constexpr T N = T{1} << NL<T>::digits / 2;
                 for (T i = 0; i < N; ++i)
                 {
                     r.emplace_back(i);
-                    r.emplace_back(std::numeric_limits<T>::max() - i);
+                    r.emplace_back(NL<T>::max() - i);
                 }
             }
             r.shrink_to_fit();
@@ -196,10 +196,10 @@ namespace fpp_tests::arithmetic
             }
             REQUIRE_THROWS_AS(wideLS(0,0), std::domain_error);
         }
+        using Th=typename rankOf<TestType>::half;
         SECTION("aint_dt op+=") {
             for (const auto &l:samples) {
-                using Th=typename rankOf<TestType>::half;
-                const TestType a=std::min<Tt>(Tt{std::numeric_limits<TestType>::max()}-l,std::numeric_limits<std::make_unsigned_t<Th>>::max())+1;
+                const TestType a=std::min<Tt>(Tt{NL<TestType>::max()}-l,NL<std::make_unsigned_t<Th>>::max())+1;
                 for (TestType r=0;r<a;++r) {
                     CAPTURE(l,r);
                     TestType t=l+r;
@@ -216,7 +216,7 @@ namespace fpp_tests::arithmetic
                 const auto [l,r] = *it;
                 CAPTURE(l, r);
                 Tt t = Tt(l) >> r;
-                aint_dt<typename rankOf<TestType>::half> a(l);
+                aint_dt<Th> a(l);
                 a>>=r;
                 Tt y = a.merge();
                 REQUIRE(t==y);
@@ -245,15 +245,15 @@ namespace fpp_tests::arithmetic
     TEMPLATE_TEST_CASE("promotion", "", int, unsigned int)
     {
         using Tt = rankOf<TestType>::two;
-        std::vector<TestType> samples{std::numeric_limits<TestType>::max()};
+        std::vector<TestType> samples{NL<TestType>::max()};
         if constexpr (std::is_signed_v<TestType>)
-            samples.emplace_back(std::numeric_limits<TestType>::min());
+            samples.emplace_back(NL<TestType>::min());
         else
         {
             SECTION("u212Div")
             {
-                Tt dividend = std::numeric_limits<Tt>::max();
-                TestType divisor = TestType{1} << std::numeric_limits<TestType>::digits - 1;
+                Tt dividend = NL<Tt>::max();
+                TestType divisor = TestType{1} << NL<TestType>::digits - 1;
                 CAPTURE(dividend, divisor);
                 Tt tq = dividend / divisor, tr = dividend % divisor;
                 auto [a,yr] = u212Div(aint_dt<TestType>(dividend), divisor);
@@ -280,7 +280,7 @@ namespace fpp_tests::arithmetic
             for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++it) {
                 const auto [a,b] = *it;
                 Tt l=static_cast<Tt>(a)*b;
-                Tu r=Tu{1}<<std::numeric_limits<Tu>::digits-1;
+                Tu r=Tu{1}<<NL<Tu>::digits-1;
                 aint_dt<TestType> c(l);
                 c+=r;
                 Tt t=l+r;

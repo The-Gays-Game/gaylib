@@ -16,8 +16,8 @@ constexpr
 F toF(B v, uint8_t radix, std::float_round_style S)
     noexcept(noexcept(std::ldexp(v, int{})))
 {
-    using nl = std::numeric_limits<F>;
-    constexpr uint8_t d = std::numeric_limits<B>::digits;
+    using nl = NL<F>;
+    constexpr uint8_t d = NL<B>::digits;
     if (d > nl::digits)
     {
         uint8_t sd;
@@ -26,7 +26,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
         else
         {
             auto av = condNeg<std::make_unsigned_t<B>>(v, v < 0);
-            sd = std::numeric_limits<decltype(av)>::digits - std::countl_zero(av);
+            sd = NL<decltype(av)>::digits - std::countl_zero(av);
         }
 
         bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd - radix) <= nl::min_exponent - 1;
@@ -60,7 +60,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
  */
 export
 {
-    template <class T, uint8_t R> concept testSize = std::numeric_limits<T>::digits >= R;
+    template <class T, uint8_t R> concept testSize = NL<T>::digits >= R;
 
     //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
     template <test_Tuint Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
@@ -71,7 +71,7 @@ export
         //can overflow to 0 when Radix==digits.
         constexpr
         explicit ufx(Bone v)
-            noexcept: repr(Radix < std::numeric_limits<Bone>::digits ? v << Radix : 0)
+            noexcept: repr(Radix < NL<Bone>::digits ? v << Radix : 0)
         {
         }
 

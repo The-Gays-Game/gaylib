@@ -6,7 +6,8 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 add_compile_definitions(debug_arithmetic)
 add_library(fixed STATIC
-        arithmetic.h)
+        #arithmetic.h
+)
 target_sources(fixed
     PUBLIC
         FILE_SET CXX_MODULES FILES
