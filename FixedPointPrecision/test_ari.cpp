@@ -1,3 +1,5 @@
+#pragma STDC FENV_ACCESS ON
+
 #include "arithmetic.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
@@ -5,7 +7,8 @@
 #include<cstdint>
 #include<ranges>
 #include<stdexcept>
-
+#include<cfenv>
+#include<cmath>
 namespace fpp_tests::arithmetic
 {
     namespace
@@ -222,12 +225,27 @@ namespace fpp_tests::arithmetic
                 REQUIRE(t==y);
             }
         }
+        constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
+        constexpr std::float_round_style styleEnumMap[4]{std::round_toward_zero,std::round_to_nearest,std::round_toward_infinity,std::round_toward_neg_infinity};
+        SECTION("aint_dt.narrowArsRnd") {
+            const auto byIt = std::views::iota(uint8_t{0}, static_cast<uint8_t>(sizeof(Th) * CHAR_BIT + 1));
+            for (size_t i=0;i<std::size(styleMacroMap);++i) {
+                std::fesetround(styleEnumMap[i]);
+            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
+                const auto [l,r] = *it;
+                CAPTURE(l, r);
+                TestType t=std::lrintf(std::ldexpf(l,-r));
+                TestType y=aint_dt<Th>(l).narrowArsRnd(r);
+                REQUIRE(t==y);
+            }
+            }
+        }
         if constexpr (std::is_unsigned_v<TestType>)
         {
             SECTION("u212Div")
             {
                 const std::vector<aint_dt<TestType>> aintSamples = sampleAint<TestType>();
-                const auto nDivSamples = sampleNDiv<TestType>();
+                const std::vector<TestType> nDivSamples = sampleNDiv<TestType>();
                 for (auto it = CartIter(aintSamples.begin(), aintSamples.end(), nDivSamples.begin(), nDivSamples.end()); it != it.end; ++it)
                 {
                     const auto [l,r] = *it;
