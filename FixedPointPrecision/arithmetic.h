@@ -217,21 +217,19 @@ struct aint_dt
     constexpr
     aint_dt& operator >>=(uint8_t by)
     {
-#ifdef debug_arithmetic
-        if (by > std::numeric_limits<Tu>::digits)
-            throw std::underflow_error("can't shift by more than width.");
-#endif
-        const auto h = this->h;
-        bool notZero = by;
-        this->h >>= notZero;
-        this->h >>= by - notZero;
-        l >>= notZero;
-        l >>= by - notZero;
-
-        by = std::numeric_limits<Tu>::digits - by;
-        notZero = by;
-        l |= h << notZero << by - notZero;
-
+        if (constexpr uint8_t ud=std::numeric_limits<Tu>::digits; by<ud) {
+            l>>=by;
+            const uint8_t a=ud-by;
+            l|=h<<(a-1)<<1;
+            h>>=by;
+        }else {
+            by-=ud;
+            l=h>>by;
+            if (std::is_signed_v<Ta>)
+                h>>=std::numeric_limits<Ta>::digits;
+            else
+                h=0;
+        }
         return *this;
     }
 

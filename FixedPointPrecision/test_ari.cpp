@@ -168,7 +168,7 @@ namespace fpp_tests::arithmetic
         T1 c1;
     };
 
-    TEMPLATE_TEST_CASE("general", "[wide]", uint16_t, int16_t)
+    TEMPLATE_TEST_CASE("general","", uint16_t, int16_t)
     {
         using Tt = rankOf<TestType>::two;
         const std::vector<TestType> samples = sample<TestType>();
@@ -210,6 +210,18 @@ namespace fpp_tests::arithmetic
                 }
             }
         }
+        SECTION("aint_dt op>>=") {
+            const auto byIt = std::views::iota(uint8_t{0}, uint8_t(sizeof(TestType) * CHAR_BIT ));
+            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
+                const auto [l,r] = *it;
+                CAPTURE(l, r);
+                Tt t = Tt(l) >> r;
+                aint_dt<typename rankOf<TestType>::half> a(l);
+                a>>=r;
+                Tt y = a.merge();
+                REQUIRE(t==y);
+            }
+        }
         if constexpr (std::is_unsigned_v<TestType>)
         {
             SECTION("u212Div")
@@ -230,7 +242,7 @@ namespace fpp_tests::arithmetic
             }
         }
     }
-    TEMPLATE_TEST_CASE("edge", "[wide]", int, unsigned int)
+    TEMPLATE_TEST_CASE("promotion", "", int, unsigned int)
     {
         using Tt = rankOf<TestType>::two;
         std::vector<TestType> samples{std::numeric_limits<TestType>::max()};

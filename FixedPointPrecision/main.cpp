@@ -25,8 +25,9 @@ void test1() {
 }
 int main()
 {
-    int8_t a=-1;
-    int16_t b=a;
-    uint16_t c=a;
-    std::cout<<int16_t(a)<<" "<<b<<" "<<uint16_t(a)<<std::endl;
+    uint8_t a=0b1111'1111;
+    uint8_t b=0b1000'0000;
+    uint16_t c=a*a+b;
+    uint32_t e=a*a+b;
+    std::cout<<c<<" "<<e<<std::endl;
 }
