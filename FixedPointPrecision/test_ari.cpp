@@ -262,6 +262,19 @@ namespace fpp_tests::arithmetic
                 REQUIRE(tr==yr);
             }
         }
+        SECTION("aint_dt op>>=") {
+            using Th=typename rankOf<TestType>::half;
+            const std::vector<uint8_t> byIt({0,sizeof(Th)*CHAR_BIT,sizeof(TestType)*CHAR_BIT-1});
+            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
+                const auto [l,r] = *it;
+                CAPTURE(l, r);
+                TestType t = l >> r;
+                aint_dt<Th> a(l);
+                a>>=r;
+                TestType y = a.merge();
+                REQUIRE(t==y);
+            }
+        }
         SECTION("aint_dt op+=") {
             using Tu=std::make_unsigned_t<TestType>;
             for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++it) {
