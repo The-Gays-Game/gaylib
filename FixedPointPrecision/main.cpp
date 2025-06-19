@@ -25,9 +25,8 @@ void test1() {
 }
 int main()
 {
-    uint8_t a=0b1111'1111;
-    uint8_t b=0b1000'0000;
-    uint16_t c=a*a+b;
-    uint32_t e=a*a+b;
-    std::cout<<c<<" "<<e<<std::endl;
+    uint32_t c=2147484160;
+    aint_dt<int8_t> a(static_cast<int16_t>(c));
+    int8_t b=a.narrowArsRnd(9,std::round_toward_infinity);
+    std::cout<<int16_t(b)<<" "<<std::llrint(std::ldexp(c,0));
 }

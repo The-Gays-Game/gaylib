@@ -9,6 +9,7 @@
 #include<stdexcept>
 #include<cfenv>
 #include<cmath>
+
 namespace fpp_tests::arithmetic
 {
     namespace
@@ -106,6 +107,9 @@ namespace fpp_tests::arithmetic
         }
     }
 
+    constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
+    constexpr std::float_round_style styleEnumMap[4]{std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity};
+
     template <std::forward_iterator T0, std::forward_iterator T1>
     struct CartIter
     {
@@ -171,7 +175,7 @@ namespace fpp_tests::arithmetic
         T1 c1;
     };
 
-    TEMPLATE_TEST_CASE("general","", uint16_t, int16_t)
+    TEMPLATE_TEST_CASE("general", "", uint16_t, int16_t)
     {
         using Tt = rankOf<TestType>::two;
         const std::vector<TestType> samples = sample<TestType>();
@@ -199,45 +203,55 @@ namespace fpp_tests::arithmetic
             }
             REQUIRE_THROWS_AS(wideLS(0,0), std::domain_error);
         }
-        using Th=typename rankOf<TestType>::half;
-        SECTION("aint_dt op+=") {
-            for (const auto &l:samples) {
-                const TestType a=std::min<Tt>(Tt{NL<TestType>::max()}-l,NL<std::make_unsigned_t<Th>>::max())+1;
-                for (TestType r=0;r<a;++r) {
-                    CAPTURE(l,r);
-                    TestType t=l+r;
+        using Th = typename rankOf<TestType>::half;
+        SECTION("aint_dt op+=")
+        {
+            for (const auto& l : samples)
+            {
+                const TestType a = std::min<Tt>(Tt{NL<TestType>::max()} - l, NL<std::make_unsigned_t<Th>>::max()) + 1;
+                for (TestType r = 0; r < a; ++r)
+                {
+                    CAPTURE(l, r);
+                    TestType t = l + r;
                     aint_dt<Th> b(l);
-                    b+=r;
-                    TestType y=b.merge();
+                    b += r;
+                    TestType y = b.merge();
                     REQUIRE(t==y);
                 }
             }
         }
-        SECTION("aint_dt op>>=") {
-            const auto byIt = std::views::iota(uint8_t{0}, uint8_t(sizeof(TestType) * CHAR_BIT ));
-            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
+        SECTION("aint_dt op>>=")
+        {
+            const auto byIt = std::views::iota(uint8_t{0}, uint8_t(sizeof(TestType) * CHAR_BIT));
+            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it)
+            {
                 const auto [l,r] = *it;
                 CAPTURE(l, r);
                 Tt t = Tt(l) >> r;
                 aint_dt<Th> a(l);
-                a>>=r;
+                a >>= r;
                 Tt y = a.merge();
                 REQUIRE(t==y);
             }
         }
-        constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
-        constexpr std::float_round_style styleEnumMap[4]{std::round_toward_zero,std::round_to_nearest,std::round_toward_infinity,std::round_toward_neg_infinity};
-        SECTION("aint_dt.narrowArsRnd") {
+
+        SECTION("aint_dt.narrowArsRnd")
+        {
             const auto byIt = std::views::iota(uint8_t{0}, static_cast<uint8_t>(sizeof(Th) * CHAR_BIT + 1));
-            for (size_t i=0;i<std::size(styleMacroMap);++i) {
-                std::fesetround(styleEnumMap[i]);
-            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
-                const auto [l,r] = *it;
-                CAPTURE(l, r);
-                TestType t=std::lrintf(std::ldexpf(l,-r));
-                TestType y=aint_dt<Th>(l).narrowArsRnd(r);
-                REQUIRE(t==y);
-            }
+            for (size_t i = 0; i < std::size(styleMacroMap); ++i)
+            {
+                std::fesetround(styleMacroMap[i]);
+                for (auto it = CartIter(samples.begin() + 1, samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it)
+                {
+                    const auto [l,r] = *it;
+                    CAPTURE(l, int16_t(r), styleEnumMap[i]);
+                    TestType t = std::lrintf(std::ldexpf(l, -r));
+                    if (t >= NL<Th>::min() && t <= NL<Th>::max())
+                    {
+                        TestType y = aint_dt<Th>(l).narrowArsRnd(r, styleEnumMap[i]);
+                        REQUIRE(t==y);
+                    }
+                }
             }
         }
         if constexpr (std::is_unsigned_v<TestType>)
@@ -260,6 +274,7 @@ namespace fpp_tests::arithmetic
             }
         }
     }
+
     TEMPLATE_TEST_CASE("promotion", "", int, unsigned int)
     {
         using Tt = rankOf<TestType>::two;
@@ -280,29 +295,33 @@ namespace fpp_tests::arithmetic
                 REQUIRE(tr==yr);
             }
         }
-        SECTION("aint_dt op>>=") {
-            using Th=typename rankOf<TestType>::half;
-            const std::vector<uint8_t> byIt({0,sizeof(Th)*CHAR_BIT,sizeof(TestType)*CHAR_BIT-1});
-            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
+        SECTION("aint_dt op>>=")
+        {
+            using Th = typename rankOf<TestType>::half;
+            const std::vector<uint8_t> byIt({0, sizeof(Th) * CHAR_BIT, sizeof(TestType) * CHAR_BIT - 1});
+            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it)
+            {
                 const auto [l,r] = *it;
                 CAPTURE(l, r);
                 TestType t = l >> r;
                 aint_dt<Th> a(l);
-                a>>=r;
+                a >>= r;
                 TestType y = a.merge();
                 REQUIRE(t==y);
             }
         }
-        SECTION("aint_dt op+=") {
-            using Tu=std::make_unsigned_t<TestType>;
-            for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++it) {
+        SECTION("aint_dt op+=")
+        {
+            using Tu = std::make_unsigned_t<TestType>;
+            for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++it)
+            {
                 const auto [a,b] = *it;
-                Tt l=static_cast<Tt>(a)*b;
-                Tu r=Tu{1}<<NL<Tu>::digits-1;
+                Tt l = static_cast<Tt>(a) * b;
+                Tu r = Tu{1} << NL<Tu>::digits - 1;
                 aint_dt<TestType> c(l);
-                c+=r;
-                Tt t=l+r;
-                Tt y=c.merge();
+                c += r;
+                Tt t = l + r;
+                Tt y = c.merge();
                 REQUIRE(t==y);
             }
         }
@@ -329,6 +348,24 @@ namespace fpp_tests::arithmetic
                 REQUIRE(t==y);
             }
         }
-
+        SECTION("aint_dt.narrowArsRnd")
+        {
+            const auto byIt = std::views::iota(uint8_t{0}, static_cast<uint8_t>(sizeof(TestType) * CHAR_BIT + 1));
+            for (size_t i = 0; i < std::size(styleMacroMap); ++i)
+            {
+                std::fesetround(styleMacroMap[i]);
+                for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it)
+                {
+                    const auto [l,r] = *it;
+                    CAPTURE(l, r, styleEnumMap[i]);
+                    Tt t = std::llrint(std::ldexp(l, -r));
+                    if (t >= NL<TestType>::min() && t <= NL<TestType>::max())
+                    {
+                        TestType y = aint_dt<TestType>(l).narrowArsRnd(r, styleEnumMap[i]);
+                        REQUIRE(t==y);
+                    }
+                }
+            }
+        }
     }
 }
