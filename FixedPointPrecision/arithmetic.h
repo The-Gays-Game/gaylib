@@ -436,16 +436,17 @@ constexpr
 Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s)
 {
     Ts q = dividend / divisor, r = dividend % divisor;
+    bool qNeg=(dividend ^ divisor) < 0;
     switch (s)
     {
     case std::round_toward_infinity:
-        return q + (r != 0 && q >= 0); //q can be 0 when r!=0
+        return q + (r != 0 && !qNeg); //r==0 when dividend^divisor==0.
     case std::round_toward_neg_infinity:
-        return q - (r != 0 && q <= 0);
+        return q - (r != 0 && qNeg);
     case std::round_to_nearest:
         {
             Ts special = q & (divisor & 1 ^ 1); //round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-            return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, (dividend ^ divisor) < 0);
+            return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
             //B(abs(b))/2-special>=0;r and b/2 will never overflow after abs. 5%-8==5, 5/-8==0, but we need -1, so must use dividend^divisor.
         }
     default:

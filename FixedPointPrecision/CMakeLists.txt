@@ -23,11 +23,11 @@ else()
 endif()
 target_compile_options(
 		fixed PUBLIC
-		-Wall -Wextra
+		-Wall -Wextra #-fsanitize=undefined -save-temps -v
 		${flags}
 )
 add_executable(demo main.cpp)
-target_link_libraries(demo PRIVATE fixed)
+target_link_libraries(demo PUBLIC fixed)
 
 Include(FetchContent)
 FetchContent_Declare(
