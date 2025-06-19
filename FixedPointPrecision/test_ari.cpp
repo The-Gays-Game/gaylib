@@ -174,6 +174,25 @@ namespace fpp_tests::arithmetic {
                 }
             }
         }
+        if constexpr (std::is_signed_v<TestType>) {
+            SECTION("lsDivRnd") {
+                for (uint8_t by = 1; by < sizeof(TestType) * CHAR_BIT; ++by) {
+                    for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
+                        std::fesetround(styleMacroMap[i]);
+                        for (auto it = CartIter(dividendSamples.begin(), dividendSamples.end(), divisorSamples.begin(),
+                                                divisorSamples.end()); it != it.end; ++it) {
+                            const auto [l,r] = *it;
+                            if (wideLS(l, by).h >= r)
+                                continue;
+                            CAPTURE(l, r, by, styleEnumMap[i]);
+                            TestType t = std::lrintf(l * float(1 << by) / r);
+                            TestType y = lsDivRnd(l, Tt(r), by, styleEnumMap[i]);
+                            REQUIRE(t==y);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     TEMPLATE_TEST_CASE("general", "", uint16_t, int16_t) {
@@ -265,9 +284,26 @@ namespace fpp_tests::arithmetic {
     TEMPLATE_TEST_CASE("promotion", "", int, unsigned int) {
         using Tt = rankOf<TestType>::two;
         std::vector<TestType> samples{NL<TestType>::max()};
-        if constexpr (std::is_signed_v<TestType>)
+
+        if constexpr (std::is_signed_v<TestType>) {
             samples.emplace_back(NL<TestType>::min());
-        else {
+            const std::vector<TestType> dividendSamples({NL<TestType>::max() - 1, NL<TestType>::min() + 1});
+
+            SECTION("lsDivRnd") {
+                constexpr uint8_t by = sizeof(TestType) * CHAR_BIT - 1;
+                for (auto it = CartIter(dividendSamples.begin(), dividendSamples.end(), samples.begin(), samples.end());
+                     it != it.end; ++it) {
+                    for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
+                        std::fesetround(styleMacroMap[i]);
+                        const auto [l,r] = *it;
+                        CAPTURE(l, r, styleEnumMap[i]);
+                        Tt t = std::llrint(l * ldexp(1, by) / r);
+                        TestType y = lsDivRnd(l, r, by, styleEnumMap[i]);
+                        REQUIRE(t==y);
+                    }
+                }
+            }
+        } else {
             SECTION("u212Div") {
                 Tt dividend = NL<Tt>::max();
                 TestType divisor = TestType{1} << NL<TestType>::digits - 1;
@@ -343,13 +379,14 @@ namespace fpp_tests::arithmetic {
         }
         SECTION("divRnd") {
             std::vector<TestType> divisorSamples = samples;
-            samples.emplace_back(TestType{1});
+            divisorSamples.emplace_back(TestType{1});
             std::vector<TestType> dividendSamples = samples;
             dividendSamples.emplace_back(NL<TestType>::max() - 1);
             if constexpr (std::is_signed_v<TestType>) {
-                samples.emplace_back(TestType{-1});
+                divisorSamples.emplace_back(TestType{-1});
                 dividendSamples.emplace_back(NL<TestType>::min() + 1);
             }
+
             for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
                 std::fesetround(styleMacroMap[i]);
                 for (auto it = CartIter(dividendSamples.begin(), dividendSamples.end(), divisorSamples.begin(),
