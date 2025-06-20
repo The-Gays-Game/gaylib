@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.30)
-project(FixedPointPrecision CXX)
+project(FixedPointNumbers CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-add_compile_definitions(debug_arithmetic)
+set(CMAKE_COLOR_DIAGNOSTICS ON)
 add_library(fixed STATIC
         #arithmetic.h
 )
