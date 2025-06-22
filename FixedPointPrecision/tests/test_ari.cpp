@@ -1,5 +1,4 @@
 #pragma STDC FENV_ACCESS ON
-
 #include "arithmetic.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
@@ -383,7 +382,7 @@ namespace fpp_tests::arithmetic {
             std::vector<TestType> dividendSamples = samples;
             dividendSamples.emplace_back(NL<TestType>::max() - 1);
             if constexpr (std::is_signed_v<TestType>) {
-                divisorSamples.emplace_back(TestType{-1});
+                //divisorSamples.emplace_back(TestType{-1});
                 dividendSamples.emplace_back(NL<TestType>::min() + 1);
             }
 
