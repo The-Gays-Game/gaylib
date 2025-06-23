@@ -7,7 +7,7 @@
 #include<cstdlib>
 #include<algorithm>
 #include<version>
-#ifdef debug_arithmetic
+#ifdef checkArgs
 #include<stdexcept>
 #endif
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 202302L) || __cplusplus >= 202302L)
@@ -326,7 +326,7 @@ constexpr
 aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by)
 {
     using Tu = aint_dt<T>::Tu;
-#ifdef debug_arithmetic
+#ifdef checkArgs
     if (by == 0)
         throw std::domain_error("can't shift by 0");
 #elif __has_builtin(__builtin_assume)
@@ -362,7 +362,7 @@ template <test_Tuint T>
 constexpr
 std::tuple<T, T> uNarrow211Div(const aint_dt<T>& dividend, const T/*assume normalized*/ divisor)
 {
-#ifdef debug_arithmetic
+#ifdef checkArgs
     if (std::countl_zero(divisor))
         throw std::domain_error("unnormalized divisor");
     if (dividend.h >= divisor)
@@ -490,7 +490,7 @@ template <test_Tuint T>
 static constexpr
 std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T>& dividend, const T/*should be normalized for uNarrow211Div*/ divisor)
 {
-#ifdef debug_arithmetic
+#ifdef checkArgs
     if (divisor == 0)
         throw std::domain_error("0 divisor");
 #endif

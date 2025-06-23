@@ -7,7 +7,7 @@ module;
 #include<algorithm>
 #include <cmath>
 export module fixed;
-
+export import :testHelper;
 template <std::floating_point F,test_Tint B>
 #ifdef FP_MANIP_CE
 #define TOF_CE

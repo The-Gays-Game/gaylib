@@ -8,7 +8,7 @@
 #include<stdexcept>
 #include<cfenv>
 #include<cmath>
-
+import fixed;
 namespace fpp_tests::arithmetic {
     namespace {
         template<test_Tint T>
@@ -84,11 +84,6 @@ namespace fpp_tests::arithmetic {
             r.shrink_to_fit();
             return r;
         }
-
-        constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
-        constexpr std::float_round_style styleEnumMap[4]{
-            std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity
-        };
         namespace SV = std::views;
     }
 

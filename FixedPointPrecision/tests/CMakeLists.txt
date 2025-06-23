@@ -15,18 +15,38 @@ FetchContent_MakeAvailable(Catch2)
 cmake_path(GET fnnTests_SOURCE_DIR PARENT_PATH srcDir)
 include_directories(${srcDir})
 
-add_library(ari INTERFACE ${srcDir}/arithmetic.h)
-target_compile_definitions(ari INTERFACE debug_arithmetic)
+add_library(t_ari INTERFACE ${srcDir}/arithmetic.h)
+target_compile_definitions(t_ari INTERFACE checkArgs)
+
+message(STATUS ${srcDir})
+add_library(t_fixed STATIC)
+target_sources(t_fixed PUBLIC
+        FILE_SET CXX_MODULES
+        BASE_DIRS ${srcDir}
+        FILES ../fixed.cxx helpers.cxx
+)
+target_compile_options(t_fixed PUBLIC
+        -frounding-math
+        -Wall -Wextra
+        ${flags}
+)
+target_link_libraries(t_fixed PUBLIC t_ari)
+
 add_executable(ariTests test_ari.cpp)
+target_link_libraries(ariTests PRIVATE t_ari)
+target_link_libraries(ariTests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(ariTests PRIVATE t_fixed)
+
+add_executable(fpnTests test_fpn.cpp)
 target_compile_options(ariTests PRIVATE
         -frounding-math
         -Wall -Wextra
         ${flags}
 )
-target_link_libraries(ariTests PRIVATE ari)
-target_link_libraries(ariTests PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(ariTests PRIVATE fixed)
+target_link_libraries(fpnTests PRIVATE t_fixed)
+target_link_libraries(fpnTests PRIVATE Catch2::Catch2WithMain)
 
 include(CTest)
 include(Catch)
 catch_discover_tests(ariTests)
+catch_discover_tests(fpnTests)

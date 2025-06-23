@@ -5,7 +5,7 @@ set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
-add_compile_definitions(debug_arithmetic)
+add_compile_definitions(checkArgs)
 add_subdirectory(tests)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	set(flags -fsanitize=undefined,shift,signed-integer-overflow -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses)
@@ -15,12 +15,13 @@ else()
 	set(flags "")
 endif()
 
-add_library(fixed STATIC)
+add_library(fixed STATIC
+		dummyHelper.cxx)
 target_sources(fixed
-    PUBLIC
-        FILE_SET CXX_MODULES FILES
-            fixed.cxx)
-target_link_libraries(fixed PUBLIC ari)
+    	PUBLIC
+		FILE_SET CXX_MODULES
+		FILES fixed.cxx dummyHelper.cxx)
+#target_link_libraries(fixed PUBLIC ari)
 
 
 target_compile_options(
@@ -29,5 +30,5 @@ target_compile_options(
 		${flags}
 )
 add_executable(demo main.cpp)
-target_link_libraries(demo PRIVATE fixed ari)
+target_link_libraries(demo PRIVATE t_fixed t_ari)
 
