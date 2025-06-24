@@ -25,8 +25,7 @@ void test1() {
 }
 int main()
 {
-    uint32_t c=2147484160;
-    aint_dt<int8_t> a(static_cast<int16_t>(c));
-    int8_t b=a.narrowArsRnd(9,std::round_toward_infinity);
-    std::cout<<int16_t(b)<<" "<<std::llrint(std::ldexp(c,0));
+    int32_t a=1830390437;
+  fx<int32_t,0>b(a);
+  std::cout<<float(b);
 }

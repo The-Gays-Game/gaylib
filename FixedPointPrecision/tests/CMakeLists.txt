@@ -34,16 +34,16 @@ target_compile_definitions(t_fixed PRIVATE t_fixed_cxx)
 target_link_libraries(t_fixed PUBLIC t_ari)
 
 add_executable(ariTests test_ari.cpp)
-target_link_libraries(ariTests PRIVATE t_ari)
-target_link_libraries(ariTests PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(ariTests PRIVATE t_fixed)
-
-add_executable(fpnTests test_fpn.cpp)
 target_compile_options(ariTests PRIVATE
         -frounding-math
         -Wall -Wextra
         ${flags}
 )
+target_link_libraries(ariTests PRIVATE t_ari)
+target_link_libraries(ariTests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(ariTests PRIVATE t_fixed)
+
+add_executable(fpnTests test_fpn.cpp)
 target_link_libraries(fpnTests PRIVATE t_fixed)
 target_link_libraries(fpnTests PRIVATE Catch2::Catch2WithMain)
 
