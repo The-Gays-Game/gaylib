@@ -23,13 +23,14 @@ add_library(t_fixed STATIC)
 target_sources(t_fixed PUBLIC
         FILE_SET CXX_MODULES
         BASE_DIRS ${srcDir}
-        FILES ../fixed.cxx helpers.cxx ../support.cxx
+        FILES ../fixed.cxx
 )
 target_compile_options(t_fixed PUBLIC
         -frounding-math
         -Wall -Wextra
         ${flags}
 )
+target_compile_definitions(t_fixed PRIVATE t_fixed_cxx)
 target_link_libraries(t_fixed PUBLIC t_ari)
 
 add_executable(ariTests test_ari.cpp)

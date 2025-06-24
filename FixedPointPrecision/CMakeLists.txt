@@ -15,20 +15,19 @@ else()
 	set(flags "")
 endif()
 add_subdirectory(tests)
-add_library(fixed STATIC
-		dummyHelper.cxx)
+add_library(fixed STATIC)
 target_sources(fixed
 		#PUBLIC
-    	PUBLIC FILE_SET CXX_MODULES FILES fixed.cxx dummyHelper.cxx support.cxx
+    	PUBLIC FILE_SET CXX_MODULES FILES fixed.cxx
 		)
 #target_link_libraries(fixed PUBLIC ari)
 
 
 target_compile_options(
 		fixed PUBLIC
-		-Wall -Wextra #-fsanitize=undefined -save-temps -v
+		-Wall -Wextra
 		${flags}
 )
 add_executable(demo main.cpp)
-target_link_libraries(demo PRIVATE fixed t_ari)
+target_link_libraries(demo PRIVATE fixed)
 

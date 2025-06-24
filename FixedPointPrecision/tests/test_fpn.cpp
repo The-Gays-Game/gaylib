@@ -7,6 +7,14 @@
 #include<cfenv>
 #include<cmath>
 import fixed;
+namespace {
+constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
+constexpr std::float_round_style styleEnumMap[4] {
+  std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity
+};
+static_assert(std::size(styleEnumMap)==std::size(styleMacroMap));
+
+}
 TEMPLATE_TEST_CASE("general","",int16_t,uint16_t) {
   auto mode=GENERATE(range(size_t{0},std::size(styleEnumMap)));
     std::fesetround(styleMacroMap[mode]);
@@ -17,7 +25,7 @@ TEMPLATE_TEST_CASE("general","",int16_t,uint16_t) {
         for (uint8_t radix=0;radix<=NL<TestType>::digits;++radix) {
           CAPTURE(repr,radix,styleMacroMap[mode]);
           float t=std::ldexpf(repr,-radix);
-          float y=e_toF<float>(repr,radix,styleEnumMap[mode]);
+          float y=toF<float>(repr,radix,styleEnumMap[mode]);
           REQUIRE(t==y);
         }
       }
