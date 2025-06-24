@@ -4,6 +4,7 @@ module;
 #include <cfenv>
 #include<cmath>
 export module fixed:testHelper;
+import :support;
 export{
   template <std::floating_point F,test_Tint B>
 #ifdef FP_MANIP_CE
@@ -18,4 +19,5 @@ F e_toF(B v, uint8_t radix, std::float_round_style S)
   constexpr std::float_round_style styleEnumMap[4]{
     std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity
 };
+  static_assert(std::size(styleEnumMap)==std::size(styleMacroMap));
 }

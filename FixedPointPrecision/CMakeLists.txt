@@ -6,7 +6,7 @@ set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 add_compile_definitions(checkArgs)
-add_subdirectory(tests)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	set(flags -fsanitize=undefined,shift,signed-integer-overflow -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -14,13 +14,13 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 else()
 	set(flags "")
 endif()
-
+add_subdirectory(tests)
 add_library(fixed STATIC
 		dummyHelper.cxx)
 target_sources(fixed
-    	PUBLIC
-		FILE_SET CXX_MODULES
-		FILES fixed.cxx dummyHelper.cxx)
+		#PUBLIC
+    	PUBLIC FILE_SET CXX_MODULES FILES fixed.cxx dummyHelper.cxx support.cxx
+		)
 #target_link_libraries(fixed PUBLIC ari)
 
 
@@ -30,5 +30,5 @@ target_compile_options(
 		${flags}
 )
 add_executable(demo main.cpp)
-target_link_libraries(demo PRIVATE t_fixed t_ari)
+target_link_libraries(demo PRIVATE fixed t_ari)
 
