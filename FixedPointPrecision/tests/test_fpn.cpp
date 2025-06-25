@@ -21,7 +21,7 @@ std::minstd_rand rg32;
 
 
 TEMPLATE_TEST_CASE("no round","",int16_t,uint16_t) {
-  auto mode=GENERATE(0,1,2,3);
+  auto mode=GENERATE(range(size_t{0},std::size(styleEnumMap)));
   using Tt=rankOf<TestType>::two;
     SECTION("toF") {
       for (Tt i=NL<TestType>::min();i<=NL<TestType>::max();++i){
@@ -39,7 +39,7 @@ TEMPLATE_TEST_CASE("no round","",int16_t,uint16_t) {
 TEMPLATE_TEST_CASE("round","",int32_t,uint32_t) {
   rg32.seed(Catch::getSeed());
   auto mode=GENERATE(range(size_t{0},std::size(styleEnumMap)));
-  std::fesetround(styleEnumMap[mode]);
+  std::fesetround(styleMacroMap[mode]);
   SECTION("toF") {
     for (int8_t radix=0;radix<=NL<TestType>::digits;++radix) {
     for (uint32_t i=0;i<uint32_t{1<<15};++i){

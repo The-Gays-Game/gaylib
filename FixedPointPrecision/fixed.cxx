@@ -44,7 +44,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
     )
     {
       //with radix<=128, sd<=128, then sd<=2 needs no rounding.
-      v = aint_dt<typename rankOf<B>::half>(v).narrowRnd(more, S);
+      v=rnd(v,more,S);
       radix -= more;
       return std::ldexp(v, -int8_t(radix));
     }

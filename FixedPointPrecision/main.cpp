@@ -1,22 +1,22 @@
+#pragma STDC FENV_ACCESS ON
+
 #include <cmath>
 #include<cstdint>
 #include <format>
 #include<iostream>
 #include<limits>
 #include<iomanip>
+#include<cfenv>
 #include "arithmetic.h"
 import fixed;
 void test0() {
-  int32_t a=1830390437;
+  std::fesetround(FE_TOWARDZERO);
+  int32_t a=1072625963;
   fx<int32_t,0>b(a);
-  std::cout<<float(b);
+  float c=std::ldexp(a,0);
+  std::cout<<std::setprecision(9)<<float(b)<<" "<<c;
 }
 int main()
 {
-  int16_t a=-32768;
-  uint8_t b=8;
-  std::cout<<rnd(a,b,std::round_toward_zero)<<std::endl;
-  std::cout<<rnd(a,b,std::round_to_nearest)<<std::endl;
-  std::cout<<rnd(a,b,std::round_toward_neg_infinity)<<std::endl;
-  std::cout<<rnd(a,b,std::round_toward_infinity)<<std::endl;
+  test0();
 }
