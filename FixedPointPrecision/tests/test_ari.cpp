@@ -261,6 +261,22 @@ namespace fpp_tests::arithmetic {
                 }
             }
         }
+      SECTION("rnd") {
+          REQUIRE_THROWS_AS(rnd(0,0,styleEnumMap[0]), std::domain_error);
+          const auto byIt = SV::iota(uint8_t{1}, static_cast<uint8_t>(sizeof(Th) * CHAR_BIT + 1));
+          for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
+            std::fesetround(styleMacroMap[i]);
+            for (auto it = CartIter(samples.begin() + 1, samples.end(), byIt.begin(), byIt.end()); it != it.end; ++
+                 it) {
+              const auto [l,r] = *it;
+              CAPTURE(l, r, styleEnumMap[i]);
+              TestType t = std::lrintf(std::ldexpf(l, -r));
+                TestType y = rnd(l,r, styleEnumMap[i]);
+                REQUIRE(t==y);
+
+                 }
+          }
+        }
         if constexpr (std::is_unsigned_v<TestType>) {
             SECTION("u212Div") {
                 const std::vector<aint_dt<TestType> > aintSamples = sampleAint<TestType>();
@@ -375,6 +391,20 @@ namespace fpp_tests::arithmetic {
                     }
                 }
             }
+        }
+      SECTION("rnd") {
+          const auto byIt = SV::iota(uint8_t{1}, static_cast<uint8_t>(sizeof(TestType) * CHAR_BIT + 1));
+          for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
+            std::fesetround(styleMacroMap[i]);
+            for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
+              const auto [l,r] = *it;
+              CAPTURE(l, r, styleEnumMap[i]);
+              Tt t = std::llrint(std::ldexp(l, -r));
+                TestType y = rnd(l,r, styleEnumMap[i]);
+                REQUIRE(t==y);
+
+            }
+          }
         }
         SECTION("divRnd") {
             std::vector<TestType> divisorSamples = samples;

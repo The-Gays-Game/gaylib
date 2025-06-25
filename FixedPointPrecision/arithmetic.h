@@ -271,8 +271,12 @@ struct aint_dt
 template<test_Tint T>
 constexpr
 T rnd(const T &v,const uint8_t to,const std::float_round_style s) {
+#ifdef checkArgs
+  if (to==0)
+    throw std::domain_error("can't round to 0.");
+#endif
   using Tu=std::make_unsigned_t<T>;
-  const T eucQ=v>>to;
+  const T eucQ=v>>to-1>>1;
   const Tu mod=v&(NL<Tu>::max() >> NL<Tu>::digits - to);
   switch (s) {
   case std::round_toward_infinity:
