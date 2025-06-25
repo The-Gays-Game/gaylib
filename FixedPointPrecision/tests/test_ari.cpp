@@ -245,7 +245,7 @@ namespace fpp_tests::arithmetic {
             }
         }
 
-        SECTION("aint_dt.narrowArsRnd") {
+        SECTION("aint_dt.narrowRnd") {
             const auto byIt = SV::iota(uint8_t{0}, static_cast<uint8_t>(sizeof(Th) * CHAR_BIT + 1));
             for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
                 std::fesetround(styleMacroMap[i]);
@@ -255,7 +255,7 @@ namespace fpp_tests::arithmetic {
                     CAPTURE(l, r, styleEnumMap[i]);
                     TestType t = std::lrintf(std::ldexpf(l, -r));
                     if (t >= NL<Th>::min() && t <= NL<Th>::max()) {
-                        TestType y = aint_dt<Th>(l).narrowArsRnd(r, styleEnumMap[i]);
+                        TestType y = aint_dt<Th>(l).narrowRnd(r, styleEnumMap[i]);
                         REQUIRE(t==y);
                     }
                 }
@@ -361,7 +361,7 @@ namespace fpp_tests::arithmetic {
                 REQUIRE(t==y);
             }
         }
-        SECTION("aint_dt.narrowArsRnd") {
+        SECTION("aint_dt.narrowRnd") {
             const auto byIt = SV::iota(uint8_t{0}, static_cast<uint8_t>(sizeof(TestType) * CHAR_BIT + 1));
             for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
                 std::fesetround(styleMacroMap[i]);
@@ -370,7 +370,7 @@ namespace fpp_tests::arithmetic {
                     CAPTURE(l, r, styleEnumMap[i]);
                     Tt t = std::llrint(std::ldexp(l, -r));
                     if (t >= NL<TestType>::min() && t <= NL<TestType>::max()) {
-                        TestType y = aint_dt<TestType>(l).narrowArsRnd(r, styleEnumMap[i]);
+                        TestType y = aint_dt<TestType>(l).narrowRnd(r, styleEnumMap[i]);
                         REQUIRE(t==y);
                     }
                 }

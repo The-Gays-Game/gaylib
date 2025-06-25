@@ -8,6 +8,7 @@ module;
 #include <cmath>
 export module fixed;
 #ifdef t_fixed_cxx
+#undef t_fixed_cxx
 #define cexport export
 #else
 #define cexport
@@ -43,7 +44,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
     )
     {
       //with radix<=128, sd<=128, then sd<=2 needs no rounding.
-      v = aint_dt<typename rankOf<B>::half>(v).narrowArsRnd(more, S);
+      v = aint_dt<typename rankOf<B>::half>(v).narrowRnd(more, S);
       radix -= more;
       return std::ldexp(v, -int8_t(radix));
     }
@@ -105,7 +106,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix < P1)
-                repr = aint_dt<Bone>(0, repr).narrowArsRnd(P1 - Radix, Style);
+                repr = aint_dt<Bone>(0, repr).narrowRnd(P1 - Radix, Style);
         }
 
         auto operator<=>(const ufx&) const = default;
@@ -114,7 +115,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt<Bone>(0, repr).narrowArsRnd(Radix, std::round_toward_zero);
+            return aint_dt<Bone>(0, repr).narrowRnd(Radix, std::round_toward_zero);
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -164,12 +165,12 @@ export
             else if constexpr (requires { typename rankOf<Bone>::two; })
             {
                 typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
-                repr = aint_dt<Bone>(a).narrowArsRnd(Radix, Style);
+                repr = aint_dt<Bone>(a).narrowRnd(Radix, Style);
             }
             else
             {
                 aint_dt<Bone> a = wideMul(repr, o.repr);
-                repr = a.narrowArsRnd(Radix, Style);
+                repr = a.narrowRnd(Radix, Style);
             }
             return *this;
         }
@@ -249,7 +250,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix < P1)
-                repr = aint_dt<Bone>(repr).narrowArsRnd(P1 - Radix, Style);
+                repr = aint_dt<Bone>(repr).narrowRnd(P1 - Radix, Style);
         }
 
         auto operator <=>(const fx&) const = default;
@@ -273,7 +274,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt<Bone>(repr).narrowArsRnd(Radix, std::round_toward_zero);
+            return aint_dt<Bone>(repr).narrowRnd(Radix, std::round_toward_zero);
         }
 
         template <std::floating_point F>
@@ -317,12 +318,12 @@ export
             else if constexpr (requires { typename rankOf<Bone>::two; })
             {
                 typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
-                repr = aint_dt<Bone>(a).narrowArsRnd(Radix, Style);
+                repr = aint_dt<Bone>(a).narrowRnd(Radix, Style);
             }
             else
             {
                 aint_dt<Bone> a = wideMul(repr, o.repr);
-                repr = a.narrowArsRnd(Radix, Style);
+                repr = a.narrowRnd(Radix, Style);
             }
             return *this;
         }

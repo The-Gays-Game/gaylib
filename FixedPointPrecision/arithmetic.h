@@ -240,64 +240,55 @@ struct aint_dt
     {
         return aint_dt(*this) >>= by;
     }
-
     constexpr
-    Ta narrowArsRnd(const uint8_t by, const std::float_round_style s) const
+    Ta narrowRnd(const uint8_t to, const std::float_round_style s) const
     {
-        const Ta eucQ = (*this >> by).l;
+        const Ta eucQ = (*this >> to).l;
 #if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
-        if (__builtin_expect_with_probability(by == 0, true, 1. / NL<Ta>::digits))
+        if (__builtin_expect_with_probability(to == 0, true, 1. / NL<Ta>::digits))
 #else
-        if (by == 0)
+        if (to == 0)
 #endif
             return eucQ;
-        const Tu modder = NL<Tu>::max() >> NL<Tu>::digits - by;
-        Tu mod = l & modder;
-        if (std::is_unsigned_v<Ta>)
-        {
-            switch (s)
-            {
-            case std::round_toward_infinity:
-                return eucQ + (mod != 0);
-            case std::round_to_nearest:
-                {
-                    //tie to even
-                    Tu special = eucQ & 1;
-                    Tu halfDivisor = Tu{1} << by - 1;
-                    return eucQ + (mod > halfDivisor - special);
-                }
-            default:
-                return eucQ;
-            }
-        }
-        else
-        {
-            switch (s)
-            {
-            case std::round_toward_infinity:
-                return eucQ + (mod != 0);
-            case std::round_toward_zero:
-                return eucQ + (mod != 0 && h < 0);
-            case std::round_to_nearest:
-                {
-                    Tu halfDivisor = Tu{1} << by - 1;
-
-                    //when h>0, +half to round near tie away. when h<0, << is round down, add half for round near tie to 0, then -1 for tie away.
-                    Tu qNeg = Tu(h) >> NL<Ta>::digits;
-                    aint_dt dividend = *this + (halfDivisor - qNeg); //dividend<0: won't overflow. dividend>0: max(dividend)==wideMul(int_min,int_min), max(dividend)+halfDivisor<=int_max.
-                    Ta q = (dividend >> by).l;
-                    mod = dividend.l + qNeg & modder; //no need for dividend.l&modder first because unsigned arithmetic is mod 2^n.
-
-                    bool toEven = mod == 0 && (q & 1) == 1; //--q when q is odd and rem==0. when q>0, rem==0<=>mod==0; when q<0, rem==0<=>mod==divisor-1
-                    return q - condNeg(Ta(toEven), qNeg);
-                }
-            default:
-                return eucQ;
-            }
-        }
+        const Tu mod = l & (NL<Tu>::max() >> NL<Tu>::digits - to);
+      switch (s) {
+      case std::round_toward_infinity:
+        return eucQ + (mod != 0);
+      case std::round_to_nearest: {
+        Ta special = eucQ & 1;
+        Tu halfDivisor = Tu{1} << to - 1;
+        return eucQ + (mod > halfDivisor - special);
+      }
+      case std::round_toward_zero:
+        if (std::is_signed_v<Ta>)
+          return eucQ + (mod != 0 && h < 0);
+      default:
+        return eucQ;
+      }
     }
 };
 
+template<test_Tint T>
+constexpr
+T rnd(const T &v,const uint8_t to,const std::float_round_style s) {
+  using Tu=std::make_unsigned_t<T>;
+  const T eucQ=v>>to;
+  const Tu mod=v&(NL<Tu>::max() >> NL<Tu>::digits - to);
+  switch (s) {
+  case std::round_toward_infinity:
+    return eucQ + (mod != 0);
+  case std::round_to_nearest: {
+    T special = eucQ & 1;
+    Tu halfDivisor = Tu{1} << to - 1;
+    return eucQ + (mod > halfDivisor - special);
+  }
+  case std::round_toward_zero:
+    if (std::is_signed_v<T>)
+      return eucQ + (mod != 0 && v < 0);
+  default:
+    return eucQ;
+  }
+}
 template <test_Tint T>
 constexpr
 aint_dt<T> wideMul(const T a, const T b)

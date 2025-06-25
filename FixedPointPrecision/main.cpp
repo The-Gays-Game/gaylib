@@ -6,26 +6,17 @@
 #include<iomanip>
 #include "arithmetic.h"
 import fixed;
-void test0()
-{
-    int16_t a=5,b=-8;
-    int16_t c=lsDivRnd(a,b,0,std::round_to_nearest);
-
-    std::cout<<int16_t(c)<<" "<<std::endl;
-}
-void test1() {
-    fx<__int128, 127,std::round_to_nearest>a(0.000001f);
-    float b=a;
-    std::cout<<testSize<__int128,127><<std::endl;
-    std::cout<<b<<" "<<std::isnormal(std::ldexp(1,-128))<<std::endl;
-    int32_t e=std::numeric_limits<int32_t>::max();
-    e<<=31;
-    using C=std::common_type_t<int64_t,uint16_t>;
-    std::cout<<divRnd(e,e,std::round_to_nearest)<<std::endl;
+void test0() {
+  int32_t a=1830390437;
+  fx<int32_t,0>b(a);
+  std::cout<<float(b);
 }
 int main()
 {
-    int32_t a=1830390437;
-  fx<int32_t,0>b(a);
-  std::cout<<float(b);
+  int16_t a=-32768;
+  uint8_t b=8;
+  std::cout<<rnd(a,b,std::round_toward_zero)<<std::endl;
+  std::cout<<rnd(a,b,std::round_to_nearest)<<std::endl;
+  std::cout<<rnd(a,b,std::round_toward_neg_infinity)<<std::endl;
+  std::cout<<rnd(a,b,std::round_toward_infinity)<<std::endl;
 }
