@@ -106,7 +106,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix < P1)
-                repr = aint_dt<Bone>(0, repr).narrowRnd(P1 - Radix, Style);
+                repr = rnd(repr,P1-Radix,Style);
         }
 
         auto operator<=>(const ufx&) const = default;
@@ -115,7 +115,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt<Bone>(0, repr).narrowRnd(Radix, std::round_toward_zero);
+            return rnd(repr,Radix, std::round_toward_zero);
         }
 
         //conversion to float point is always defined and never lose all precision.
@@ -250,7 +250,7 @@ export
             if (Radix > P1)
                 repr <<= Radix - P1;
             else if (Radix < P1)
-                repr = aint_dt<Bone>(repr).narrowRnd(P1 - Radix, Style);
+                repr = rnd(repr,P1 - Radix, Style);
         }
 
         auto operator <=>(const fx&) const = default;
@@ -274,7 +274,7 @@ export
         explicit operator Bone() const
             noexcept
         {
-            return aint_dt<Bone>(repr).narrowRnd(Radix, std::round_toward_zero);
+            return rnd(repr,Radix, std::round_toward_zero);
         }
 
         template <std::floating_point F>
