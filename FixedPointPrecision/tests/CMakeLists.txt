@@ -5,9 +5,9 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
         GIT_TAG        2b60af89e23d28eefc081bc930831ee9d45ea58b#v3.8.1
 )
-set(CATCH_CONFIG_WINDOWS_CRTDBG ON)
-set(CATCH_BUILD_TESTING OFF)
-set(CATCH_CONFIG_WINDOWS_SEH ON)
+option(CATCH_CONFIG_WINDOWS_CRTDBG ON)
+option(CATCH_BUILD_TESTING OFF)
+option(CATCH_CONFIG_WINDOWS_SEH ON)
 FetchContent_MakeAvailable(Catch2)
 #configure_file(${catch2_SOURCE_DIR}/extras/gdbinit ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit)
 
@@ -26,7 +26,7 @@ target_sources(t_fixed PUBLIC
         FILES ../fixed.cxx
 )
 target_compile_options(t_fixed PUBLIC
-        -frounding-math
+        -frounding-math -fstrict-enums
         -Wall -Wextra
         ${flags}
 )
@@ -35,7 +35,7 @@ target_link_libraries(t_fixed PUBLIC t_ari)
 
 add_executable(ariTests test_ari.cpp)
 target_compile_options(ariTests PRIVATE
-        -frounding-math
+        -frounding-math -fstrict-enums
         -Wall -Wextra
         ${flags}
 )
