@@ -9,13 +9,25 @@
 #include <cfenv>
 #include <cmath>
 #include <random>
+#include<utility>
 import fixed;
 namespace {
 constexpr int styleMacroMap[4]{FE_TOWARDZERO, FE_TONEAREST, FE_UPWARD, FE_DOWNWARD};
 constexpr std::float_round_style styleEnumMap[4]{
     std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity};
+//constexpr auto styleEnumSeq=std::integer_sequence<std::float_round_style,std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity>{};
 static_assert(std::size(styleEnumMap) == std::size(styleMacroMap));
 std::minstd_rand rg32;
+template<class ,uint8_t ,std::float_round_style >
+struct intToFpn{};
+template<test_Tsint T0,uint8_t V0,std::float_round_style V1>
+struct intToFpn<T0,V0,V1> {
+  using type=fx<T0,V0,V1>;
+};
+template<test_Tuint T0,uint8_t V0,std::float_round_style V1>
+struct intToFpn<T0,V0,V1> {
+using type=ufx<T0,V0,V1>;
+};
 } // namespace
 
 TEMPLATE_TEST_CASE("no round", "", int16_t, uint16_t) {
@@ -31,6 +43,24 @@ TEMPLATE_TEST_CASE("no round", "", int16_t, uint16_t) {
         REQUIRE(t == y);
       }
     }
+  }
+  SECTION("ctor<f>") {
+    const auto radixes=std::make_integer_sequence<uint8_t, NL<TestType>::digits>{};
+      for (Tt i = NL<TestType>::min(); i <= NL<TestType>::max(); ++i) {
+        const auto ys=[=]<uint8_t ...radix>(std::integer_sequence<uint8_t,radix...>)->std::array<TestType,NL<TestType>::digits> {
+          return {(typename intToFpn<TestType,radix,std::round_toward_zero>::type(i).repr)...};
+        }(radixes);
+        const auto ts=[=]<uint8_t ...radix>(std::integer_sequence<uint8_t,radix...>)->std::array<TestType,NL<TestType>::digits> {
+          return {(TestType(std::ldexpf(i,radix)))...};
+        }(radixes);
+        for (size_t j=0;j<std::size(ys);++j) {
+          CAPTURE(j,i);
+          REQUIRE(ts[j]==ys[j]);
+        }
+
+
+    }
+
   }
 }
 
