@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.30)
-project(FixedPointNumbers CXX)
+project(FixedPointNumbers
+		VERSION 0.0.1
+		DESCRIPTION "A correct, modern, fast fixed point decimal library using C++20."
+		LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
