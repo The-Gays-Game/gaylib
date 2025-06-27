@@ -1,13 +1,14 @@
 project(fnnTests CXX)
 Include(FetchContent)
+
+option(CATCH_CONFIG_WINDOWS_CRTDBG ON)
+option(CATCH_BUILD_TESTING OFF)
+option(CATCH_CONFIG_WINDOWS_SEH ON)
 FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
         GIT_TAG        2b60af89e23d28eefc081bc930831ee9d45ea58b#v3.8.1
 )
-option(CATCH_CONFIG_WINDOWS_CRTDBG ON)
-option(CATCH_BUILD_TESTING OFF)
-option(CATCH_CONFIG_WINDOWS_SEH ON)
 FetchContent_MakeAvailable(Catch2)
 #configure_file(${catch2_SOURCE_DIR}/extras/gdbinit ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit)
 
