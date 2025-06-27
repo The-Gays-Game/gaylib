@@ -8,7 +8,6 @@
 #include<stdexcept>
 #include<cfenv>
 #include<cmath>
-import fixed;
 namespace fpp_tests::arithmetic {
     namespace {
     constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
