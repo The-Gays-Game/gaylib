@@ -38,9 +38,9 @@ template <class T>concept all_sint = std::signed_integral<T> || std::same_as<T, 
 #define test_Tuint all_uint
 #define test_Tsint all_sint
 #else
-#define test_Tint test_Tint
-#define test_Tuint test_Tuint
-#define test_Tsint test_Tsint
+#define test_Tint std::integral
+#define test_Tuint std::unsigned_integral
+#define test_Tsint std::signed_integral
 #endif
 
 template <test_Tint T>

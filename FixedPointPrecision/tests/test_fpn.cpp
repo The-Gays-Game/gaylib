@@ -66,8 +66,8 @@ TEMPLATE_TEST_CASE("no float round 16", "", int16_t, uint16_t) {
       }
     }
   }
+  using Tu = std::make_unsigned_t<TestType>;
   SECTION("ctor change radix") {
-    using Tu = std::make_unsigned_t<TestType>;
     [radixes]<uint8_t... r0>(IntSeq<uint8_t, r0...>) {
       ([]<uint8_t... r1>(IntSeq<uint8_t, r1...>, auto radix0) {
         ([radix0]<int8_t... ss>(IntSeq<int8_t, ss...>, auto radix1) {
@@ -75,7 +75,7 @@ TEMPLATE_TEST_CASE("no float round 16", "", int16_t, uint16_t) {
             constexpr auto se = static_cast<std::float_round_style>(s());
             using A = intToFpn<TestType, radix0, se>::type;
             using B = intToFpn<TestType, radix1, se>::type;
-            for (uint16_t i = 0; i < 1024; ++i) {
+            for (uint16_t i = 0; i < 2048; ++i) {
               auto a = A::raw(rg32());
               auto b = B(a);
               auto c = ufx<Tu, radix0, std::round_indeterminate>::raw(a.repr);
@@ -100,13 +100,27 @@ TEMPLATE_TEST_CASE("no float round 16", "", int16_t, uint16_t) {
        ...);
     }(radixes);
   }
+  SECTION("to int") {
+    []<uint8_t... r0>(IntSeq<uint8_t, r0...>) {
+      ([](auto radix0) {
+        using A = intToFpn<TestType, radix0, std::round_toward_zero>::type;
+        for (Tt i = NL<TestType>::min(); i <= NL<TestType>::max(); ++i) {
+          auto a = A::raw(i);
+          float b = a;
+          CAPTURE(b);
+          REQUIRE(static_cast<TestType>(a) == static_cast<TestType>(b));
+        }
+      }(std::integral_constant<uint8_t, r0>{}),
+       ...);
+    }(radixes);
+  }
 }
 
 TEMPLATE_TEST_CASE("float round 32", "", int32_t, uint32_t) {
   rg32.seed(Catch::getSeed());
+  auto mode = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
+  std::fesetround(styleMacroMap[mode]);
   SECTION("toF") {
-    auto mode = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
-    std::fesetround(styleMacroMap[mode]);
     for (int8_t radix = 0; radix <= NL<TestType>::digits; ++radix) {
       for (uint32_t i = 0; i < uint32_t{1 << 15}; ++i) {
         TestType repr = rg32();
