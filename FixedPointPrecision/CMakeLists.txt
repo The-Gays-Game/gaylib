@@ -27,7 +27,7 @@ target_sources(fixed
 
 target_compile_options(
 		fixed PUBLIC
-		-Wall -Wextra
+		-Wall -Wextra -ffp-contract=on -frounding-math
 		${flags}
 )
 add_executable(demo main.cpp)

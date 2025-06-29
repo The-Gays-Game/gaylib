@@ -13,7 +13,7 @@ export module fixed;
 #else
 #define cexport
 #endif
-cexport template <std::floating_point F,test_Tint B>
+cexport template <std::floating_point F,std::integral B>
 #ifdef FP_MANIP_CE
 #define TOF_CE
 constexpr
@@ -64,7 +64,7 @@ export
   template <class T, uint8_t R> concept testSize = NL<T>::digits >= R;
 
   //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
-  template <test_Tuint Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
+  template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
   struct ufx {
     Bone repr;
 
@@ -91,10 +91,18 @@ export
     explicit ufx(std::floating_point auto v)
       noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix)) {
     }
+#define use_lrint NL<Bone>::digits<=NL<long>::digits
+#define use_llrint NL<Bone>::digits<=NL<long long>::digits
+    static ufx br(std::floating_point auto v)
+    noexcept(((use_lrint&&noexcept(std::lrint(v)))||(use_llrint&&noexcept(std::llrint(v))))&&noexcept(std::ldexp(v, int{}))) requires(use_llrint){
+      v=std::ldexp(v, Radix);
+      Bone a=use_lrint?std::lrint(v):std::llrint(v);
+      return raw(a);
+    }
 
     //when both params are changed say ufx<B1,P1>x and ufx<B2,P2>y when sizeof(B1)>sizeof(B2) and P1>P2, then x.repr=y.repr<<(P1-P2) can have different value then x.repr=B1(y.repr)<<(P1-P2). This is ambiguous.
 
-    template <test_Tuint B1>
+    template <std::unsigned_integral B1>
     constexpr
     explicit ufx(ufx<B1, Radix, Style> o)
       noexcept: repr(o.repr) {
@@ -198,7 +206,7 @@ export
     }
   };
 
-  template <test_Tsint Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix>
+  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix>
   class fx {
     using U = std::make_unsigned_t<Bone>;
 
@@ -225,8 +233,15 @@ export
     explicit fx(std::floating_point auto v)
       noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix)) {
     }
-
-    template <test_Tsint B1>
+    static fx br(std::floating_point auto v)
+    noexcept(((use_lrint&&noexcept(std::lrint(v)))||(use_llrint&&noexcept(std::llrint(v))))&&noexcept(std::ldexp(v, int{}))) requires(use_llrint){
+      v=std::ldexp(v, Radix);
+      Bone a=use_lrint?std::lrint(v):std::llrint(v);
+      return raw(a);
+    }
+#undef use_lrint
+#undef use_llrint
+    template <std::signed_integral B1>
     constexpr
     explicit fx(fx<B1, Radix, Style> o)
       noexcept: repr(o.repr) {

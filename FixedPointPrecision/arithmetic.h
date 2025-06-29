@@ -30,20 +30,7 @@
 #define INT_ABS_CE
 #endif
 
-#ifdef __SIZEOF_INT128__
-template <class T> concept all_int = std::integral<T> || std::same_as<T, __int128> || std::same_as<T, unsigned __int128>;
-template <class T>concept all_uint = std::unsigned_integral<T> || std::same_as<T, unsigned __int128>;
-template <class T>concept all_sint = std::signed_integral<T> || std::same_as<T, __int128>;
-#define test_Tint all_int
-#define test_Tuint all_uint
-#define test_Tsint all_sint
-#else
-#define test_Tint std::integral
-#define test_Tuint std::unsigned_integral
-#define test_Tsint std::signed_integral
-#endif
-
-template <test_Tint T>
+template <std::integral T>
 constexpr
 T condNeg
 #if defined(__GNUG__)||defined(__clang__)
@@ -55,7 +42,7 @@ T condNeg
   return doNeg ? -v : v;
 }
 
-template <test_Tint>
+template <std::integral>
 struct rankOf {
 };
 
@@ -123,7 +110,7 @@ struct rankOf<__int128> {
 
 template <class T> using NL = std::numeric_limits<T>;
 
-template <test_Tint Ta>
+template <std::integral Ta>
 struct aint_dt {
   using Tu = std::make_unsigned_t<Ta>;
   Ta h;
@@ -136,7 +123,7 @@ struct aint_dt {
     noexcept: h(h), l(l) {
   }
 
-  template <test_Tint T> requires (std::is_signed_v<T> == std::is_signed_v<Ta> && (NL<Ta>::digits + NL<Tu>::digits >= NL<T>::digits))
+  template <std::integral T> requires (std::is_signed_v<T> == std::is_signed_v<Ta> && (NL<Ta>::digits + NL<Tu>::digits >= NL<T>::digits))
   constexpr
   explicit aint_dt(T v)
     noexcept: l(v) {
@@ -246,7 +233,7 @@ struct aint_dt {
   }
 };
 
-template <test_Tint T>
+template <std::integral T>
 constexpr
 T rnd(const T v, const uint8_t to, const std::float_round_style s) {
 #if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
@@ -274,7 +261,7 @@ T rnd(const T v, const uint8_t to, const std::float_round_style s) {
   }
 }
 
-template <test_Tint T>
+template <std::integral T>
 constexpr
 aint_dt<T> wideMul(const T a, const T b)
   noexcept(std::is_unsigned_v<T>) {
@@ -296,7 +283,7 @@ aint_dt<T> wideMul(const T a, const T b)
   return {eH, eL};
 }
 
-template <test_Tint T>
+template <std::integral T>
 constexpr
 aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by) {
   using Tu = aint_dt<T>::Tu;
@@ -329,7 +316,7 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by) {
   }
 }
 
-template <test_Tuint T>
+template <std::unsigned_integral T>
 constexpr
 std::tuple<T, T> uNarrow211Div(const aint_dt<T> &dividend, const T/*assume normalized*/ divisor) {
 #ifdef checkArgs
@@ -369,7 +356,7 @@ std::tuple<T, T> uNarrow211Div(const aint_dt<T> &dividend, const T/*assume norma
   return {q.merge(), r};
 }
 
-template <test_Tuint Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor> >
+template <std::unsigned_integral Tdivisor, class Tdividend> requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor> >
 constexpr
 Tdivisor divRnd(const Tdividend &dividend, const Tdivisor divisor, const std::float_round_style s) {
   Tdivisor q, r;
@@ -392,7 +379,7 @@ Tdivisor divRnd(const Tdividend &dividend, const Tdivisor divisor, const std::fl
   }
 }
 
-template <test_Tsint Ts>
+template <std::signed_integral Ts>
 #ifdef INT_ABS_CE
 #define S_DIVR_CE
 constexpr
@@ -406,8 +393,20 @@ Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s) {
   case std::round_toward_neg_infinity:
     return q - (r != 0 && qNeg);
   case std::round_to_nearest: {
-    Ts special = q & (divisor & 1 ^ 1); //round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-    return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
+    Ts special = q & (divisor & 1 ^ 1); // round up tie when odd quotient even divisor. round down tie when even quotient and divisor
+
+    if constexpr (std::same_as<Ts, __int128> &&
+#ifdef _LIBCPP_VERSION
+                  true
+#else
+                  false
+#endif
+    ) {
+      Ts a = condNeg(r, r < 0), b = condNeg<Ts>(divisor / 2, divisor < 0);
+      return q + condNeg<Ts>(a > b - special, qNeg);
+    } else {
+      return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
+    }
     //B(abs(b))/2-special>=0;r and b/2 will never overflow after abs. 5%-8==5, 5/-8==0, but we need -1, so must use dividend^divisor.
   }
   default:
@@ -415,7 +414,7 @@ Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s) {
   }
 }
 
-template <test_Tsint Ts>
+template <std::signed_integral Ts>
 constexpr
 Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std::float_round_style s) {
   using Tu = typename aint_dt<Ts>::Tu;
@@ -444,8 +443,9 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std:
   return condNeg(absQ, qNeg);
 }
 
-template <test_Tuint T>
-static constexpr
+template <std::unsigned_integral T>
+static
+constexpr
 std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T/*should be normalized for uNarrow211Div*/ divisor) {
 #ifdef checkArgs
   if (divisor == 0)

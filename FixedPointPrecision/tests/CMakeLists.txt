@@ -28,7 +28,7 @@ target_sources(t_fixed PUBLIC
         FILES ../fixed.cxx
 )
 target_compile_options(t_fixed PUBLIC
-        -frounding-math
+        -frounding-math -ffp-contract=on
         -Wall -Wextra
         ${flags}
 )

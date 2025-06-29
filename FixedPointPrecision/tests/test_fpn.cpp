@@ -24,19 +24,19 @@ template <class, uint8_t, std::float_round_style>
 struct intToFpn {
 };
 
-template <test_Tsint T0, uint8_t V0, std::float_round_style V1>
+template <std::signed_integral T0, uint8_t V0, std::float_round_style V1>
 struct intToFpn<T0, V0, V1> {
   using type = fx<T0, V0, V1>;
 };
 
-template <test_Tuint T0, uint8_t V0, std::float_round_style V1>
+template <std::unsigned_integral T0, uint8_t V0, std::float_round_style V1>
 struct intToFpn<T0, V0, V1> {
   using type = ufx<T0, V0, V1>;
 };
 } // namespace
 template <std::integral T, T... Ints>
 using IntSeq = std::integer_sequence<T, Ints...>;
-TEMPLATE_TEST_CASE("no float round 16", "", int16_t, uint16_t) {
+TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
   using Tt = rankOf<TestType>::two;
   SECTION("toF") {
     auto mode = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
@@ -68,7 +68,7 @@ TEMPLATE_TEST_CASE("no float round 16", "", int16_t, uint16_t) {
   }
   using Tu = std::make_unsigned_t<TestType>;
   SECTION("ctor change radix") {
-    [radixes]<uint8_t... r0>(IntSeq<uint8_t, r0...>) {
+    []<uint8_t... r0>(IntSeq<uint8_t, r0...>radixes) {
       ([]<uint8_t... r1>(IntSeq<uint8_t, r1...>, auto radix0) {
         ([radix0]<int8_t... ss>(IntSeq<int8_t, ss...>, auto radix1) {
           ([radix0, radix1](auto s) {
@@ -114,9 +114,40 @@ TEMPLATE_TEST_CASE("no float round 16", "", int16_t, uint16_t) {
        ...);
     }(radixes);
   }
+
+  SECTION("op /") {
+    [radixes]<uint8_t ...sis>(IntSeq<uint8_t,sis...>){
+      ([]<uint8_t ...r0>(IntSeq<uint8_t, r0...>,auto si){
+        constexpr std::float_round_style se=styleEnumMap[si];
+        std::fesetround(styleMacroMap[si]);
+        ([se](auto radix0) {
+          using A=intToFpn<TestType, radix0, se>::type;
+          const float fpnMax=A::raw(NL<TestType>::max()),fpnMin=A::raw(NL<TestType>::min());
+          for (uint16_t i=0;i<1<<15;++i) {
+            uint32_t rv=rg32();
+            auto l=A::raw(rv),r=A::raw(rv>>16);
+            double a=double(l)/double(r);
+            /*
+             *why can't we use `float a=float(l)/float(r)` here? fpn division result is correctly rounded. this means q=round(a*2^radix/b). single operation
+             *of `float` is also correctly rounded, which means <0.5(for none round-to-nearest it's 1ulp, which makes matter worse) ulp, but how is `t` calculated? `t=lrint(round(l/r)*2^radix)`, note ldexp is exact, so
+             *round(a*2^radix)=a*2^radix=ldexp(a,radix). lrint introduces another rounding, so the ulp distance sums up to <1. `float` has 24 digits and
+             *`fx` has 16 digits, so 1 ulp in `float` can be >0.5 ulp in `fx`, this means rounding to the incorrect direction of the int, differing by 1. however,
+             *`double` has 53 digits, so 1 ulp in `double` is <0.5 ulp in `fx`, this means correct rounding.
+             */
+            CAPTURE(l.repr,r.repr,radix0,se);
+            if (a<=fpnMax&&a>=fpnMin) {
+              A y=l/r;
+              auto t=A::br(a);
+              REQUIRE(t.repr==y.repr);
+            }
+          }
+        }(std::integral_constant<uint8_t, r0>{}),...);
+      }(radixes,std::integral_constant<int8_t, sis>{}),...);
+    }(std::make_integer_sequence<uint8_t,std::size(styleEnumMap)>{});
+  }
 }
 
-TEMPLATE_TEST_CASE("float round 32", "", int32_t, uint32_t) {
+TEMPLATE_TEST_CASE("bone 32", "", int32_t, uint32_t) {
   rg32.seed(Catch::getSeed());
   auto mode = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
   std::fesetround(styleMacroMap[mode]);
@@ -133,11 +164,11 @@ TEMPLATE_TEST_CASE("float round 32", "", int32_t, uint32_t) {
   }
 }
 
-TEMPLATE_TEST_CASE("large", "", __int128, unsigned __int128) {
+TEMPLATE_TEST_CASE("bone 128", "", __int128, unsigned __int128) {
   rg32.seed(Catch::getSeed());
-  auto mode = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
-  std::fesetround(styleMacroMap[mode]);
   SECTION("toF") {
+    auto mode = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
+    std::fesetround(styleMacroMap[mode]);
     for (int16_t radix = 0; radix <= NL<TestType>::digits; ++radix) {
       for (TestType i = 0; i < 1 << 8; ++i) {
         /*
@@ -158,5 +189,31 @@ TEMPLATE_TEST_CASE("large", "", __int128, unsigned __int128) {
         }
       }
     }
+  }
+
+  constexpr auto radixes = std::make_integer_sequence<uint8_t, NL<TestType>::digits>{};
+  SECTION("op /") {
+    using calcType=std::conditional_t<std::is_unsigned_v<TestType>,uint16_t,int16_t>;
+    [radixes]<uint8_t ...sis>(IntSeq<uint8_t,sis...>){
+      ([]<uint8_t ...r0>(IntSeq<uint8_t, r0...>,auto si){
+        constexpr std::float_round_style se=styleEnumMap[si];
+        std::fesetround(styleMacroMap[si]);
+        ([se](auto radix0) {
+          using A=intToFpn<TestType, radix0, se>::type;
+          const float fpnMax=A::raw(NL<calcType>::max()),fpnMin=A::raw(NL<calcType>::min());
+          for (uint16_t i=0;i<1<<13;++i) {
+            uint32_t rv=rg32();
+            auto l=A::raw(rv),r=A::raw(rv>>16);
+            double a=double(l)/double(r);
+            //CAPTURE(calcType(l.repr),calcType(r.repr),radix0,se);//gcc's ld(linker) isn't happy with this line.
+            if (a<=fpnMax&&a>=fpnMin) {
+              A y=l/r;
+              A t(a);
+              REQUIRE(t.repr==y.repr);
+            }
+          }
+        }(std::integral_constant<uint8_t, r0>{}),...);
+      }(radixes,std::integral_constant<int8_t, sis>{}),...);
+    }(std::make_integer_sequence<uint8_t,std::size(styleEnumMap)>{});
   }
 }

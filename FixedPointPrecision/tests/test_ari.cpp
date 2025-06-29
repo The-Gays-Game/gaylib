@@ -15,7 +15,7 @@ namespace fpp_tests::arithmetic {
       std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity
     };
     static_assert(std::size(styleEnumMap)==std::size(styleMacroMap));
-        template<test_Tint T>
+        template<std::integral T>
         std::vector<aint_dt<T> > sampleAint() noexcept {
             using Tt = typename rankOf<T>::two;
             std::vector<aint_dt<T> > r;
@@ -49,7 +49,7 @@ namespace fpp_tests::arithmetic {
             return r;
         }
 
-        template<test_Tuint Tu>
+        template<std::unsigned_integral Tu>
         std::vector<Tu> sampleNDiv() noexcept {
             constexpr uint8_t d = NL<Tu>::digits;
             constexpr Tu N = Tu{1} << d / 2;
@@ -63,7 +63,7 @@ namespace fpp_tests::arithmetic {
             return r;
         }
 
-        template<test_Tint T>
+        template<std::integral T>
         std::vector<T> sample() noexcept {
             std::vector<T> r;
             if constexpr (std::is_signed_v<T>) {
