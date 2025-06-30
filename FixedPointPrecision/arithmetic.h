@@ -195,7 +195,7 @@ struct aint_dt {
     } else {
       by -= ud;
       l = h >> by;
-      if (std::is_signed_v<Ta>)
+      if constexpr(std::is_signed_v<Ta>)
         h >>= NL<Ta>::digits;
       else
         h = 0;

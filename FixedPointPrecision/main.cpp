@@ -33,6 +33,24 @@ void test1() {
 }
 int main()
 {
-  __int128 a=-1;
-  std::cout<<std::unsigned_integral<unsigned __int128><<std::endl;
+  std::fesetround(FE_DOWNWARD);
+  using A=fx<__int128,2,std::round_to_nearest>;
+  A a=A::raw(-5961);
+  A b=A::raw(14);
+  double af=double(a),bf=double(b);
+  A c=a*b;
+  double cf=af*bf;
+  std::cout<<std::setprecision(9)<<af<<" "<<bf<<std::endl;
+  std::cout<<std::setprecision(9)<<double(c)<<" "<<cf<<std::endl;
+  std::cout<<std::setprecision(9)<<int64_t(c.repr)<<" "<<int64_t(std::ldexp(cf,2))<<" "<<int64_t(A(cf).repr)<<std::endl;
 }
+/*
+*  REQUIRE(calcType(t.repr)==calcType(y.repr))
+with expansion:
+  -20863 == -20864
+with message:
+  calcType(l.repr) := -5961
+  calcType(r.repr) := 14
+  int16_t(radix0) := 2
+  se := 1
+ */

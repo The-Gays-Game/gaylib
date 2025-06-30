@@ -45,6 +45,9 @@ target_link_libraries(ariTests PRIVATE t_ari)
 target_link_libraries(ariTests PRIVATE Catch2::Catch2WithMain)
 
 add_executable(fpnTests test_fpn.cpp)
+#target_link_options(fpnTests
+#        PRIVATE -fuse-ld=lld
+#)
 target_link_libraries(fpnTests PRIVATE t_fixed)
 target_link_libraries(fpnTests PRIVATE t_ari)
 target_link_libraries(fpnTests PRIVATE Catch2::Catch2WithMain)
