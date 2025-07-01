@@ -8,12 +8,9 @@
 #include<stdexcept>
 #include<cfenv>
 #include<cmath>
+import helpers;
 namespace fpp_tests::arithmetic {
     namespace {
-    constexpr int styleMacroMap[4]{FE_TOWARDZERO,FE_TONEAREST,FE_UPWARD,FE_DOWNWARD};
-    constexpr std::float_round_style styleEnumMap[4] {
-      std::round_toward_zero, std::round_to_nearest, std::round_toward_infinity, std::round_toward_neg_infinity
-    };
     static_assert(std::size(styleEnumMap)==std::size(styleMacroMap));
         template<std::integral T>
         std::vector<aint_dt<T> > sampleAint() noexcept {
@@ -165,7 +162,7 @@ namespace fpp_tests::arithmetic {
                                         divisorSamples.end()); it != it.end; ++it) {
                     const auto [a,r] = *it;
                     TestType l = a;
-                    CAPTURE(l, r, styleEnumMap[i]);
+                    CAPTURE(Tt(l), Tt(r), styleEnumMap[i],float(l)/r,std::fegetround());
                     TestType t = std::lrintf(float(l) / r);
                     TestType y = divRnd(l, r, styleEnumMap[i]);
                     REQUIRE(t==y);
