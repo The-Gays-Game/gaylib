@@ -347,5 +347,18 @@ export
     auto operator-(fx o) const {
       return fx(*this) -= o;
     }
+
+    constexpr
+    fx operator-()const {
+      return raw(-repr);
+    }
+
+    constexpr
+    fx abs()const {
+      if constexpr(requires{std::abs(repr);})
+        return raw(std::abs(repr));
+      else
+        return raw(condNeg(repr,repr<0));
+    }
   };
 }
