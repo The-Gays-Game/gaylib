@@ -158,7 +158,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
             uint32_t rv = rg32();
             auto l = A::raw(rv), r = A::raw(rv >> 16);
             double a = double(l) * double(r);
-            //CAPTURE(l.repr, r.repr, radix0, se);
+            CAPTURE(l.repr, r.repr, radix0, se);
             if (a <= fpnMax && a >= fpnMin) {
               A y = l * r;
               auto t = A::br(a);
