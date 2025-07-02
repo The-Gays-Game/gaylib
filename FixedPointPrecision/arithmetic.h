@@ -318,7 +318,11 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by) {
 
 template <std::unsigned_integral T>
 constexpr
-std::tuple<T, T> uNarrow211Div(const aint_dt<T> &dividend, const T/*assume normalized*/ divisor) {
+std::tuple<T, T> uNarrow211Div
+#if defined(__GNUG__)||defined(__clang__)
+[[gnu::hot]]
+#endif
+(const aint_dt<T> &dividend, const T/*assume normalized*/ divisor) {
 #ifdef checkArgs
   if (std::countl_zero(divisor))
     throw std::domain_error("unnormalized divisor");

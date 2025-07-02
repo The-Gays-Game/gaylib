@@ -135,7 +135,26 @@ export
       noexcept(noexcept(toF<F>(repr, Radix, Style))) {
       return toF<F>(repr, Radix, Style);
     }
-
+  constexpr
+    ufx& operator %=(ufx divisor) {
+      if (Radix==0)
+        repr%=divisor.repr;
+      else if constexpr (requires { typename rankOf<Bone>::two; }) {
+        typename rankOf<Bone>::two dividend = repr;
+        repr=dividend%divisor.repr;
+      }else {
+        uint8_t shift = std::countl_zero(divisor.repr);
+        divisor.repr <<= shift;
+        aint_dt<Bone> dividend = wideLS(repr, shift );
+        auto[unused,rem]=uNarrow211Div(dividend, divisor.repr);
+        repr=rem>>shift;
+      }
+      return *this;
+    }
+    constexpr
+    auto operator %(ufx divisor)const {
+      return ufx(*this)%divisor;
+    }
     constexpr
     ufx &operator/=(ufx divisor) {
       if (Radix == 0)
