@@ -383,6 +383,44 @@ Tdivisor divRnd(const Tdividend &dividend, const Tdivisor divisor, const std::fl
   }
 }
 
+template <std::integral Ta>
+#ifdef INT_ABS_CE
+constexpr
+#endif
+std::tuple<Ta, std::make_signed_t<Ta> > sRemQuo(const Ta dividend, const Ta divisor) {
+  using Ts = std::make_signed_t<Ta>;
+  Ta q = dividend / divisor, r = dividend % divisor;
+  Ta special = q & (divisor & 1 ^ 1);
+  Ta absR, absHalfDivisor;
+  if (std::is_signed_v<Ta>) {
+    if constexpr (requires { std::abs(r); }) {
+      absR = std::abs(r), absHalfDivisor = std::abs(divisor / 2);
+    } else {
+      absR = condNeg(r, dividend < 0);
+      absHalfDivisor = condNeg(divisor / 2, divisor < 0);
+    }
+  } else {
+    absR = r, absHalfDivisor = divisor / 2;
+  }
+  if (absR > absHalfDivisor - special) {
+    if (std::is_signed_v<Ta>) {
+      bool qNeg=(divisor^dividend)<0;
+      q+=condNeg<Ta>(1,qNeg);
+      r-=condNeg<Ta>(divisor,qNeg);
+    }else {
+#ifdef checkArgs
+      if (absR>=divisor&&absR-divisor>NL<Ts>::max())
+        throw std::overflow_error("modified rem too big.");
+      if (absR<divisor&&divisor-absR>Ta(-Ta(NL<Ts>::min())))
+        throw std::underflow_error("modified rem too small.");;
+#endif
+      ++q;
+      r-=divisor;
+    }
+  }
+  return {q, r};
+}
+
 template <std::signed_integral Ts>
 #ifdef INT_ABS_CE
 #define S_DIVR_CE
@@ -399,14 +437,8 @@ Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s) {
   case std::round_to_nearest: {
     Ts special = q & (divisor & 1 ^ 1); // round up tie when odd quotient even divisor. round down tie when even quotient and divisor
 
-    if constexpr (std::same_as<Ts, __int128> &&
-#ifdef _LIBCPP_VERSION
-                  true
-#else
-                  false
-#endif
-    ) {
-      Ts a = condNeg(r, r < 0), b = condNeg<Ts>(divisor / 2, divisor < 0);
+    if constexpr (requires{std::abs(r);}) {
+      Ts a = condNeg(r, dividend < 0), b = condNeg<Ts>(divisor / 2, divisor < 0);//sign of remainder only depends on dividend.
       return q + condNeg<Ts>(a > b - special, qNeg);
     } else {
       return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);

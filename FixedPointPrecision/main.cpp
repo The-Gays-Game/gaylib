@@ -33,24 +33,10 @@ void test1() {
 }
 int main()
 {
-  std::fesetround(FE_DOWNWARD);
-  using A=fx<__int128,2,std::round_to_nearest>;
-  A a=A::raw(-5961);
-  A b=A::raw(14);
-  double af=double(a),bf=double(b);
-  A c=a*b;
-  double cf=af*bf;
-  std::cout<<std::setprecision(9)<<af<<" "<<bf<<std::endl;
-  std::cout<<std::setprecision(9)<<double(c)<<" "<<cf<<std::endl;
-  std::cout<<std::setprecision(9)<<int64_t(c.repr)<<" "<<int64_t(std::ldexp(cf,2))<<" "<<int64_t(A(cf).repr)<<std::endl;
+  int16_t a=-2,b=4;
+  auto [q0,r0]=sRemQuo(a,b);
+  std::cout<<q0<<" "<<r0<<std::endl;
+  float r1=std::remainderf(a,b);
+  float q1=(a-r1)/b;
+  std::cout<<q1<<" "<<r1<<std::endl;
 }
-/*
-*  REQUIRE(calcType(t.repr)==calcType(y.repr))
-with expansion:
-  -20863 == -20864
-with message:
-  calcType(l.repr) := -5961
-  calcType(r.repr) := 14
-  int16_t(radix0) := 2
-  se := 1
- */
