@@ -148,6 +148,7 @@ namespace fpp_tests::arithmetic {
 
     TEMPLATE_TEST_CASE("direct", "", uint8_t, int8_t) {
         using Tt = rankOf<TestType>::two;
+
         const auto dividendSamples = SV::iota(Tt{NL<TestType>::min()}, Tt{NL<TestType>::max() + 1});
         std::vector<TestType> divisorSamples;
         for (TestType i = NL<TestType>::min(); i < 0; ++i)
@@ -155,6 +156,21 @@ namespace fpp_tests::arithmetic {
         for (Tt i = 1; i <= NL<TestType>::max(); ++i)
             divisorSamples.emplace_back(i);
         divisorSamples.shrink_to_fit();
+      SECTION("sRemQuo") {
+        for (const TestType dividend:divisorSamples) {
+          for (const TestType divisor:divisorSamples) {
+            int qt;
+            float rt=std::remquof(dividend,divisor,&qt);
+            if (rt>=NL<TestType>::min() && rt<=NL<TestType>::max()) {
+              auto[qy,ry]=sRemQuo(dividend,divisor);
+              CAPTURE(qt,qy);
+              qt&=(1<<3)-1,qy&=(1<<3)-1;
+              REQUIRE(qt==qy);
+              REQUIRE(TestType(rt)==ry);
+            }
+          }
+        }
+      }
         SECTION("divRnd") {
             for (size_t i = 0; i < std::size(styleMacroMap); ++i) {
                 std::fesetround(styleMacroMap[i]);
