@@ -143,7 +143,7 @@ export
     }
     constexpr
     auto operator %(ufx divisor)const {
-      return ufx(*this)%divisor;
+      return ufx(*this)%=divisor;
     }
     constexpr
     ufx &operator/=(ufx divisor) {
@@ -296,6 +296,17 @@ export
       noexcept(noexcept(toF<F>(repr, Radix, Style))) {
       return toF<F>(repr, Radix, Style);
     }
+
+  constexpr
+    fx&operator %=(fx divisor) {
+      repr%=divisor.repr;
+      return *this;
+    }
+    constexpr
+    auto operator%(fx divisor)const {
+      return fx(*this)%=divisor;
+    }
+
 #ifdef S_DIVR_CE
         constexpr
 #endif
@@ -312,8 +323,8 @@ export
 #ifdef S_DIVR_CE
         constexpr
 #endif
-    auto operator/(fx dividend) const {
-      return fx(*this) /= dividend;
+    auto operator/(fx divisor) const {
+      return fx(*this) /= divisor;
     }
 
     constexpr

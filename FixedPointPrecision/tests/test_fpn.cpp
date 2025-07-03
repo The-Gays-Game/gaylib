@@ -11,6 +11,7 @@
 #include <cmath>
 #include <random>
 #include <utility>
+#include<ranges>
 import fixed;
 import helpers;
 namespace {
@@ -46,6 +47,27 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
     }
   }
   constexpr auto radixes = std::make_integer_sequence<uint8_t, NL<TestType>::digits>{};
+  SECTION("op %") {
+    std::fesetround(FE_TONEAREST);
+    for (const auto _:std::ranges::views::iota(0,1<<16)) {
+      []<uint8_t... r0>(IntSeq<uint8_t, r0...> radixes){
+        ([](auto radix0) {
+          uint32_t rv=rg32();
+          using A=intToFpn<TestType, radix0,std::round_indeterminate>::type;
+          A dividend=A::raw(rv),divisor=A::raw(rv>>16);
+          if (divisor==A(0))
+            return;
+          CAPTURE(float(dividend),float(divisor));
+          A y=dividend%divisor;
+          float r=std::fmodf(dividend,divisor);
+          CAPTURE(float(y),r);
+          A t=A::br(r);
+          REQUIRE(t.repr==y.repr);
+        }(std::integral_constant<uint8_t,r0>{}),...);
+      }(radixes);
+    }
+  }
+
   SECTION("ctor<f>") {
     for (Tt i = NL<TestType>::min(); i <= NL<TestType>::max(); ++i) {
       using resT = std::array<TestType, NL<TestType>::digits>;

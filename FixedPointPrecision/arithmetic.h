@@ -438,10 +438,10 @@ Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s) {
     Ts special = q & (divisor & 1 ^ 1); // round up tie when odd quotient even divisor. round down tie when even quotient and divisor
 
     if constexpr (requires{std::abs(r);}) {
+      return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
+    } else {
       Ts a = condNeg(r, dividend < 0), b = condNeg<Ts>(divisor / 2, divisor < 0);//sign of remainder only depends on dividend.
       return q + condNeg<Ts>(a > b - special, qNeg);
-    } else {
-      return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
     }
     //B(abs(b))/2-special>=0;r and b/2 will never overflow after abs. 5%-8==5, 5/-8==0, but we need -1, so must use dividend^divisor.
   }
