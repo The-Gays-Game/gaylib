@@ -22,32 +22,41 @@ constexpr
 F toF(B v, uint8_t radix, std::float_round_style S)
   noexcept(noexcept(std::ldexp(v, int{}))) {
   using nl = NL<F>;
-  constexpr bool fast=(sizeof(F)>=sizeof(uintptr_t)||sizeof(B)>=sizeof(uintptr_t))&&std::unsigned_integral<B>&&nl::is_iec559;//when both part is less than double and largest int, in assembly direct conversion is possible. if not, we try to convert directly as compiler gives a bunch of instructions and branch.
-  constexpr uint8_t d = NL<B>::digits;
-  if constexpr (d > nl::digits) {
+  if constexpr (NL<B>::digits > nl::digits) {
     uint8_t sd;
     if constexpr (std::is_unsigned_v<B>)
-      sd = d - std::countl_zero(v);
+      sd = NL<B>::digits - std::countl_zero(v);
     else {
-      auto av = condNeg<std::make_unsigned_t<B> >(v, v < 0);
+      auto av = condNeg<std::make_unsigned_t<B>>(v, v < 0);
       sd = NL<decltype(av)>::digits - std::countl_zero(av);
     }
 
     bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd - radix) <= nl::min_exponent - 1;
     if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm &&
-#if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
-                                       __builtin_expect_with_probability(more > 0, true, (d - nl::digits) / static_cast<double>(d))
+#if defined(__GNUG__) || __has_builtin(__builtin_expect_with_probability)
+                                       __builtin_expect_with_probability(more > 0, true, (NL<B>::digits - nl::digits) / static_cast<double>(NL<B>::digits))
 #else
-        more > 0
+                                       more > 0
 #endif
     ) {
-      //with radix<=128, sd<=128, then sd<=2 needs no rounding.
-      v = rnd(v, more, S);
+      // with radix<=128, sd<=128, then sd<=2 needs no rounding.
+      v = rnd(v, more, S); // rnd makes sure v only has `nl::digits` digits and no trailing 0.
       radix -= more;
-      return std::ldexp(v, -int8_t(radix));
+
+      using Tf = std::conditional_t<sizeof(F) == 4, uint32_t,
+#ifdef __SIZEOF_INT128__
+                              std::conditional_t<sizeof(F) == 8, uint64_t, unsigned __int128>
+#else
+                              uint64_t
+#endif
+                              >;
+      constexpr bool fast = sizeof(F) >= sizeof(uintptr_t) && sizeof(B) >= sizeof(uintptr_t) && std::unsigned_integral<B> && nl::is_iec559; // we try to convert directly because compiler gives a bunch of instructions and branch.
+      F cvt = fast ? std::bit_cast<F>(Tf(nl::max_exponent - 1) << nl::digits - 1 | Tf(v) & ~(1 << nl::digits - 1)) /*no denorm or 0 here*/ : v;
+
+      return std::ldexp(cvt, -int8_t(radix));
     }
   }
-  return std::ldexp(v, -int16_t(radix));
+  return std::ldexp(v, -int16_t(radix));//if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
 }
 
 /*
@@ -65,8 +74,7 @@ export
 {
   template <class T, uint8_t R> concept testSize = NL<T>::digits >= R;
 
-#define fxDecl  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> class fx
-  fxDecl;
+  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style> requires testSize<Bone, Radix> class fx;
 
   //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
   template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
@@ -229,8 +237,8 @@ export
     }
   };
 
-  fxDecl {
-#undef fxDecl
+  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix>
+  class fx {
     using U = std::make_unsigned_t<Bone>;
 
   public:
