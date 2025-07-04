@@ -13,6 +13,7 @@ export module fixed;
 #else
 #define cexport
 #endif
+
 cexport template <std::floating_point F,std::integral B>
 #ifdef FP_MANIP_CE
 #define TOF_CE
@@ -21,6 +22,7 @@ constexpr
 F toF(B v, uint8_t radix, std::float_round_style S)
   noexcept(noexcept(std::ldexp(v, int{}))) {
   using nl = NL<F>;
+  constexpr bool fast=(sizeof(F)>=sizeof(uintptr_t)||sizeof(B)>=sizeof(uintptr_t))&&std::unsigned_integral<B>&&nl::is_iec559;//when both part is less than double and largest int, in assembly direct conversion is possible. if not, we try to convert directly as compiler gives a bunch of instructions and branch.
   constexpr uint8_t d = NL<B>::digits;
   if constexpr (d > nl::digits) {
     uint8_t sd;
