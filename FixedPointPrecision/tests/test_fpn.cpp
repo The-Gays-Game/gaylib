@@ -137,7 +137,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([se](auto radix0) {
+        ([](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<TestType>::max()), fpnMin = A::raw(NL<TestType>::min());
           for (uint16_t i = 0; i < 1 << 15; ++i) {
@@ -168,7 +168,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([se](auto radix0) {
+        ([](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<TestType>::max()), fpnMin = A::raw(NL<TestType>::min());
           for (uint16_t i = 0; i < 1 << 15; ++i) {
@@ -239,7 +239,7 @@ TEMPLATE_TEST_CASE("bone 128", "", __int128, unsigned __int128) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([se](auto radix0) {
+        ([](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<calcType>::max()), fpnMin = A::raw(NL<calcType>::min());
           for (uint16_t i = 0; i < 1 << 13; ++i) {
@@ -262,7 +262,7 @@ TEMPLATE_TEST_CASE("bone 128", "", __int128, unsigned __int128) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([se](auto radix0) {
+        ([](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<calcType>::max()), fpnMin = A::raw(NL<calcType>::min());
           for (uint16_t i = 0; i < 1 << 13; ++i) {

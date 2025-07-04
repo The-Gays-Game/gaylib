@@ -63,6 +63,9 @@ export
 {
   template <class T, uint8_t R> concept testSize = NL<T>::digits >= R;
 
+#define fxDecl  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> class fx
+  fxDecl;
+
   //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
   template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
   struct ufx {
@@ -213,10 +216,19 @@ export
       noexcept {
       return ufx(*this) -= o;
     }
+
+    constexpr
+    auto remQuo(ufx divisor)const
+    requires(Radix<NL<Bone>::digits)//at Radix==digits there's a loss of precision when converting to fx
+    {
+      using Ts=fx<std::make_signed_t<Bone>,Radix,Style>;
+      auto [q,r]=sRemQuo(repr,divisor.repr);
+      return std::tuple<ufx,Ts>{raw(q),Ts::raw(r)};
+    }
   };
 
-  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix>
-  class fx {
+  fxDecl {
+#undef fxDecl
     using U = std::make_unsigned_t<Bone>;
 
   public:
@@ -379,6 +391,12 @@ export
         return raw(std::abs(repr));
       else
         return raw(condNeg(repr,repr<0));
+    }
+
+    constexpr
+    std::tuple<fx,fx> remQuo(fx divisor)const {
+      auto [q,r]=sRemQuo(repr,divisor.repr);
+      return {raw(q),raw(r)};
     }
   };
 }

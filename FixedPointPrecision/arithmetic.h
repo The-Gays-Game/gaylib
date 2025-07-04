@@ -392,7 +392,7 @@ std::tuple<Ta, std::make_signed_t<Ta> > sRemQuo(const Ta dividend, const Ta divi
   Ta q = dividend / divisor, r = dividend % divisor;
   Ta special = q & (divisor & 1 ^ 1);
   Ta absR, absHalfDivisor;
-  if (std::is_signed_v<Ta>) {
+  if constexpr(std::is_signed_v<Ta>) {
     if constexpr (requires { std::abs(r); }) {
       absR = std::abs(r), absHalfDivisor = std::abs(divisor / 2);
     } else {
@@ -406,7 +406,7 @@ std::tuple<Ta, std::make_signed_t<Ta> > sRemQuo(const Ta dividend, const Ta divi
     if (std::is_signed_v<Ta>) {
       bool qNeg=(divisor^dividend)<0;
       q+=condNeg<Ta>(1,qNeg);
-      r-=condNeg<Ta>(divisor,qNeg);
+      r-=condNeg<std::make_unsigned_t<Ta>>(divisor,qNeg);
     }else {
 #ifdef checkArgs
       if (absR>=divisor&&absR-divisor>NL<Ts>::max())
