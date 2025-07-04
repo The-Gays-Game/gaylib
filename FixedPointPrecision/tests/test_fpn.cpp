@@ -48,7 +48,6 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
   }
   constexpr auto radixes = std::make_integer_sequence<uint8_t, NL<TestType>::digits>{};
   SECTION("op %") {
-    std::fesetround(FE_TONEAREST);
     for (const auto _:std::ranges::views::iota(0,1<<16)) {
       []<uint8_t... r0>(IntSeq<uint8_t, r0...> radixes){
         ([](auto radix0) {
@@ -59,10 +58,8 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
             return;
           CAPTURE(float(dividend),float(divisor));
           A y=dividend%divisor;
-          float r=std::fmodf(dividend,divisor);
-          CAPTURE(float(y),r);
-          A t=A::br(r);
-          REQUIRE(t.repr==y.repr);
+          float t=std::fmodf(dividend,divisor);
+          REQUIRE(t==float(y));
         }(std::integral_constant<uint8_t,r0>{}),...);
       }(radixes);
     }
@@ -137,7 +134,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([](auto radix0) {
+        ([se](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<TestType>::max()), fpnMin = A::raw(NL<TestType>::min());
           for (uint16_t i = 0; i < 1 << 15; ++i) {
@@ -168,7 +165,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([](auto radix0) {
+        ([se](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<TestType>::max()), fpnMin = A::raw(NL<TestType>::min());
           for (uint16_t i = 0; i < 1 << 15; ++i) {
@@ -185,6 +182,28 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
         }(std::integral_constant<uint8_t, r0>{}), ...);
       }(radixes, std::integral_constant<int8_t, sis>{}), ...);
     }(std::make_integer_sequence<uint8_t, std::size(styleEnumMap)>{});
+  }
+
+  SECTION("remQuo") {
+    for (const auto _:std::ranges::views::iota(0,1<<16)) {
+      []<uint8_t... r0>(IntSeq<uint8_t, r0...> radixes){
+        ([](auto radix0) {
+          uint32_t rv=rg32();
+          using A=intToFpn<TestType, radix0,std::round_indeterminate>::type;
+          const float fpnMax = A::raw(NL<TestType>::max()), fpnMin = A::raw(NL<TestType>::min());
+          A dividend=A::raw(rv),divisor=A::raw(rv>>16);
+          int qt;
+          float rt=std::remquo(float(dividend),float(divisor),&qt);
+          if (float q0=float(dividend)/float(divisor);q0<=fpnMax&&q0>=fpnMin) {
+            qt&=(1<<3)-1;
+            auto [qy,ry]=dividend.remQuo(divisor);
+            qy&=(1<<3)-1;
+            REQUIRE(qt==qy);
+            REQUIRE(rt==float(ry));
+          }
+        }(std::integral_constant<uint8_t,r0>{}),...);
+      }(radixes);
+    }
   }
 }
 
@@ -262,7 +281,7 @@ TEMPLATE_TEST_CASE("bone 128", "", __int128, unsigned __int128) {
       ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
         constexpr std::float_round_style se = styleEnumMap[si];
         std::fesetround(styleMacroMap[si]);
-        ([](auto radix0) {
+        ([se](auto radix0) {
           using A = intToFpn<TestType, radix0, se>::type;
           const float fpnMax = A::raw(NL<calcType>::max()), fpnMin = A::raw(NL<calcType>::min());
           for (uint16_t i = 0; i < 1 << 13; ++i) {

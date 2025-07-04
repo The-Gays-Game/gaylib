@@ -223,7 +223,7 @@ export
     {
       using Ts=fx<std::make_signed_t<Bone>,Radix,Style>;
       auto [q,r]=sRemQuo(repr,divisor.repr);
-      return std::tuple<ufx,Ts>{raw(q),Ts::raw(r)};
+      return std::tuple<Bone,Ts>{q,Ts::raw(r)};
     }
   };
 
@@ -394,9 +394,9 @@ export
     }
 
     constexpr
-    std::tuple<fx,fx> remQuo(fx divisor)const {
+    std::tuple<Bone,fx> remQuo(fx divisor)const {
       auto [q,r]=sRemQuo(repr,divisor.repr);
-      return {raw(q),raw(r)};
+      return {q,raw(r)};
     }
   };
 }
