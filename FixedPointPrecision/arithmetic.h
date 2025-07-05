@@ -24,9 +24,6 @@
 
 #if defined(CPP23)||defined(__GLIBCXX__)
 #define FP_MANIP_CE
-#endif
-
-#if defined(CPP23)||defined(__GLIBCXX__)
 #define INT_ABS_CE
 #endif
 
@@ -236,7 +233,7 @@ struct aint_dt {
 template <std::integral T>
 constexpr
 T rnd(const T v, const uint8_t to, const std::float_round_style s) {
-#if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
+#if __has_builtin(__builtin_expect_with_probability)
   if (__builtin_expect_with_probability(to == 0, true, 1. / NL<T>::digits))
 #else
   if (to==0)
@@ -293,7 +290,7 @@ aint_dt<T> wideLS(const T a, const uint8_t/*assume by>0*/ by) {
 #elif __has_builtin(__builtin_assume)
     __builtin_assume(by>0);
 #endif
-#if defined(__GNUG__)||__has_builtin(__builtin_expect_with_probability)
+#if __has_builtin(__builtin_expect_with_probability)
   constexpr double prob = []()consteval {
     constexpr uint16_t d = NL<T>::digits;
     uint16_t can = 0;

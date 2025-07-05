@@ -30,13 +30,13 @@ struct canFastCvt {// we try to convert directly on all x86 because compiler giv
 #endif
   ;
 };
-cexport template <std::floating_point F,std::integral B>
+cexport template <std::floating_point F, std::integral B>
 #ifdef FP_MANIP_CE
 #define TOF_CE
 constexpr
 #endif
-F toF(B v, uint8_t radix, std::float_round_style S)
-  noexcept(noexcept(std::ldexp(v, int{}))) {
+    F
+    toF(B v, uint8_t radix, std::float_round_style S) noexcept(noexcept(std::ldexp(v, int{}))) {
   using nl = NL<F>;
   if constexpr (NL<B>::digits > nl::digits) {
     uint8_t sd;
@@ -49,7 +49,7 @@ F toF(B v, uint8_t radix, std::float_round_style S)
 
     bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd - radix) <= nl::min_exponent - 1;
     if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm &&
-#if defined(__GNUG__) || __has_builtin(__builtin_expect_with_probability)
+#if __has_builtin(__builtin_expect_with_probability)
                                        __builtin_expect_with_probability(more > int8_t{0}, true, (NL<B>::digits - nl::digits) / static_cast<double>(NL<B>::digits))
 #else
                                        more > int8_t{0}
@@ -59,35 +59,35 @@ F toF(B v, uint8_t radix, std::float_round_style S)
       v = rnd(v, more, S); // rnd makes sure v only has `nl::digits` digits and no trailing 0.
       radix -= more;
 
-      constexpr uint8_t explicitDigs=nl::digits-1;
-      using Tb=Tbits<F>;
-      F cvt = canFastCvt<F,B>::value ? std::bit_cast<F>(Tb(Tb(nl::max_exponent - 1+explicitDigs) << explicitDigs | v & ~(Tb{1} << explicitDigs))) /*no denorm or 0 here*/ : v;
+      constexpr uint8_t explicitDigs = nl::digits - 1;
+      using Tb = Tbits<F>;
+      F cvt = canFastCvt<F, B>::value ? std::bit_cast<F>(Tb(Tb(nl::max_exponent - 1 + explicitDigs) << explicitDigs | v & ~(Tb{1} << explicitDigs))) /*no denorm or 0 here*/ : v;
 
       return std::ldexp(cvt, -int8_t(radix));
     }
   }
-  return std::ldexp(v, -int16_t(radix));//if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
+  return std::ldexp(v, -int16_t(radix)); // if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
 }
-cexport template<std::integral B,std::floating_point F>
+cexport template <std::integral B, std::floating_point F>
 #ifdef FP_MANIP_CE
 #define FROMF_CE
 constexpr
 #endif
-B fromF(F v,uint8_t radix)
-noexcept(noexcept(std::ldexp(v,radix))){
-  if (canFastCvt<F,B>::value) {
+    B
+    fromF(F v, uint8_t radix) noexcept(noexcept(std::ldexp(v, radix))) {
+  if (canFastCvt<F, B>::value) {
     int exp;
-    v=std::frexp(v,&exp);
-    exp+=radix;
-    if (exp<=0)
+    v = std::frexp(v, &exp);
+    exp += radix;
+    if (exp <= 0)
       return 0;
 
-    using Tb=Tbits<F>;
-    Tb cvt= Tb{1} << NL<Tb>::digits - 1 | std::bit_cast<Tb>(v) << NL<Tb>::digits - NL<F>::digits;
-    cvt>>= NL<Tb>::digits-exp ;
+    using Tb = Tbits<F>;
+    Tb cvt = Tb{1} << NL<Tb>::digits - 1 | std::bit_cast<Tb>(v) << NL<Tb>::digits - NL<F>::digits;
+    cvt >>= NL<Tb>::digits - exp;
     return cvt;
   }
-  return std::ldexp(v,radix);
+  return std::ldexp(v, radix);
 }
 /*
  *Design choices:
