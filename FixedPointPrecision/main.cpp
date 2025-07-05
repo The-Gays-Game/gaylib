@@ -10,11 +10,15 @@
 #include "arithmetic.h"
 import fixed;
 void test0() {
-  std::fesetround(FE_TOWARDZERO);
-  int32_t a=1072625963;
-  fx<int32_t,0>b(a);
-  float c=std::ldexp(a,0);
-  std::cout<<std::setprecision(9)<<float(b)<<" "<<c;
+  constexpr uint8_t explicitDigs=NL<float>::digits-1;
+  uint32_t a=0b0'111111111001110111111111;
+  float cvt = std::bit_cast<float>(uint32_t(NL<float>::max_exponent - 1+explicitDigs) << explicitDigs | uint32_t(a) & ~(1 << explicitDigs));
+  std::cout<<a<<" "<<std::setprecision(10)<<cvt<<std::endl;
+}
+void test2() {
+  double a=0.1;
+  uint64_t b=fromF<uint64_t>(a,0);
+  std::cout<<b<<" "<<std::setprecision(10)<<a;
 }
 void test1() {
   using A=fx<int16_t,10,std::round_to_nearest>;
@@ -33,10 +37,6 @@ void test1() {
 }
 int main()
 {
-  int16_t a=-2,b=4;
-  auto [q0,r0]=sRemQuo(a,b);
-  std::cout<<q0<<" "<<r0<<std::endl;
-  float r1=std::remainderf(a,b);
-  float q1=(a-r1)/b;
-  std::cout<<q1<<" "<<r1<<std::endl;
+  test0();
+  test2();
 }

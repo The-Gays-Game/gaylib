@@ -13,7 +13,23 @@ export module fixed;
 #else
 #define cexport
 #endif
-
+template <std::floating_point F> using Tbits=std::conditional_t<sizeof(F) == 4, uint32_t,
+#ifdef __SIZEOF_INT128__
+                              std::conditional_t<sizeof(F) == 8, uint64_t, unsigned __int128>
+#else
+                              uint64_t
+#endif
+                              >;
+template <std::floating_point F,std::integral B>
+struct canFastCvt {// we try to convert directly on all x86 because compiler gives a bunch of instructions(on top of cvtss2si...) and branches.
+  static constexpr bool value=//arm and risc-v both have hardware support for unsigned or fixed point conversion.
+#if defined(__x86_64__) || defined(_M_X64)||defined(i386) || defined(__i386__) || defined(__i386) || defined(_M_IX86)
+    sizeof(F) >= sizeof(uintptr_t) && sizeof(B) >= sizeof(uintptr_t) && std::unsigned_integral<B> && NL<F>::is_iec559
+#else
+      false
+#endif
+  ;
+};
 cexport template <std::floating_point F,std::integral B>
 #ifdef FP_MANIP_CE
 #define TOF_CE
@@ -34,31 +50,45 @@ F toF(B v, uint8_t radix, std::float_round_style S)
     bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd - radix) <= nl::min_exponent - 1;
     if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm &&
 #if defined(__GNUG__) || __has_builtin(__builtin_expect_with_probability)
-                                       __builtin_expect_with_probability(more > 0, true, (NL<B>::digits - nl::digits) / static_cast<double>(NL<B>::digits))
+                                       __builtin_expect_with_probability(more > int8_t{0}, true, (NL<B>::digits - nl::digits) / static_cast<double>(NL<B>::digits))
 #else
-                                       more > 0
+                                       more > int8_t{0}
 #endif
     ) {
-      // with radix<=128, sd<=128, then sd<=2 needs no rounding.
+      // with radix<=128, sd<=128, then sd<=2 needs no rounding. we provide rounding because int to float point conversion rounding type is unspecified.
       v = rnd(v, more, S); // rnd makes sure v only has `nl::digits` digits and no trailing 0.
       radix -= more;
 
-      using Tf = std::conditional_t<sizeof(F) == 4, uint32_t,
-#ifdef __SIZEOF_INT128__
-                              std::conditional_t<sizeof(F) == 8, uint64_t, unsigned __int128>
-#else
-                              uint64_t
-#endif
-                              >;
-      constexpr bool fast = sizeof(F) >= sizeof(uintptr_t) && sizeof(B) >= sizeof(uintptr_t) && std::unsigned_integral<B> && nl::is_iec559; // we try to convert directly because compiler gives a bunch of instructions and branch.
-      F cvt = fast ? std::bit_cast<F>(Tf(nl::max_exponent - 1) << nl::digits - 1 | Tf(v) & ~(1 << nl::digits - 1)) /*no denorm or 0 here*/ : v;
+      constexpr uint8_t explicitDigs=nl::digits-1;
+      using Tb=Tbits<F>;
+      F cvt = canFastCvt<F,B>::value ? std::bit_cast<F>(Tb(Tb(nl::max_exponent - 1+explicitDigs) << explicitDigs | v & ~(Tb{1} << explicitDigs))) /*no denorm or 0 here*/ : v;
 
       return std::ldexp(cvt, -int8_t(radix));
     }
   }
   return std::ldexp(v, -int16_t(radix));//if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
 }
+cexport template<std::integral B,std::floating_point F>
+#ifdef FP_MANIP_CE
+#define FROMF_CE
+constexpr
+#endif
+B fromF(F v,uint8_t radix)
+noexcept(noexcept(std::ldexp(v,radix))){
+  if (canFastCvt<F,B>::value) {
+    int exp;
+    v=std::frexp(v,&exp);
+    exp+=radix;
+    if (exp<=0)
+      return 0;
 
+    using Tb=Tbits<F>;
+    Tb cvt= Tb{1} << NL<Tb>::digits - 1 | std::bit_cast<Tb>(v) << NL<Tb>::digits - NL<F>::digits;
+    cvt>>= NL<Tb>::digits-exp ;
+    return cvt;
+  }
+  return std::ldexp(v,radix);
+}
 /*
  *Design choices:
  *  what operators are explicit:
@@ -102,8 +132,9 @@ export
         constexpr
 #endif
     explicit ufx(std::floating_point auto v)
-      noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix)) {
+      noexcept(noexcept(fromF<Bone>(v,Radix))): repr(fromF<Bone>(v,Radix)) {
     }
+
 #define use_lrint NL<Bone>::digits<=NL<long>::digits
 #define use_llrint NL<Bone>::digits<=NL<long long>::digits
     static ufx br(std::floating_point auto v)
@@ -262,7 +293,7 @@ export
         constexpr
 #endif
     explicit fx(std::floating_point auto v)
-      noexcept(noexcept(std::ldexp(v, int{}))): repr(std::ldexp(v, Radix)) {
+      noexcept(noexcept(fromF<Bone>(v,Radix))): repr(fromF<Bone>(v,Radix)) {
     }
     static fx br(std::floating_point auto v)
     noexcept(((use_lrint&&noexcept(std::lrint(v)))||(use_llrint&&noexcept(std::llrint(v))))&&noexcept(std::ldexp(v, int{}))) requires(use_llrint){
@@ -291,8 +322,8 @@ export
     auto operator <=>(const fx &) const = default;
 
     /*intcmp functions in <utility> doesn't offer threeway. default threeway can't compare signed and unsigned.
-     *fx::U is already defined, for ufx we need to redefine make_signed_t<Bone>. we'd also need a forward declaration.
-     *comparing between signed and unsigned of same size is always meaningful arithmetically.
+     *comparing between signed and unsigned of same size is always meaningful arithmetically. can't put in ufx because
+     *ufx can have more precision than fx.
      */
     constexpr
     std::strong_ordering operator<=>(ufx<U, Radix, Style> o) const

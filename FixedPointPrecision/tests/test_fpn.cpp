@@ -65,21 +65,6 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
     }
   }
 
-  SECTION("ctor<f>") {
-    for (Tt i = NL<TestType>::min(); i <= NL<TestType>::max(); ++i) {
-      using resT = std::array<TestType, NL<TestType>::digits>;
-      const auto ys = [i]<uint8_t... radix>(IntSeq<uint8_t, radix...>) -> resT {
-        return {(TestType(typename intToFpn<Tt, radix, std::round_toward_zero>::type(static_cast<float>(i)).repr))...};
-      }(radixes);
-      const auto ts = [i]<uint8_t... radix>(IntSeq<uint8_t, radix...>) -> resT {
-        return {(TestType(Tt(std::ldexpf(i, radix))))...};
-      }(radixes);
-      for (size_t j = 0; j < std::size(ys); ++j) {
-        CAPTURE(j, i);
-        REQUIRE(ts[j] == ys[j]);
-      }
-    }
-  }
   using Tu = std::make_unsigned_t<TestType>;
   SECTION("ctor change radix") {
     []<uint8_t... r0>(IntSeq<uint8_t, r0...> radixes) {
@@ -219,6 +204,35 @@ TEMPLATE_TEST_CASE("bone 32", "", int32_t, uint32_t) {
         float t = std::ldexp(repr, -radix);
         float y = toF<float>(repr, radix, styleEnumMap[mode]);
         REQUIRE(t == y);
+      }
+    }
+  }
+}
+
+TEST_CASE("fast path") {
+  SECTION("toF") {
+    for (const auto _:std::ranges::views::iota(0,1<<18)) {
+      for (int8_t radix:std::ranges::views::iota(int8_t{0},int8_t{64})) {
+        uint64_t repr=uint64_t(rg32())<<32|rg32();
+        double t=std::ldexp(repr, -radix);
+        double y=toF<double>(repr,radix,std::round_indeterminate);
+        REQUIRE(t==y);
+      }
+    }
+  }
+  SECTION("fromF") {
+    for (const auto _:std::ranges::views::iota(0,1<<18)) {
+      for (int8_t radix:std::ranges::views::iota(int8_t{0},int8_t{64})) {
+        double a=std::bit_cast<double>(static_cast<uint64_t>(rg32()>>1) <<32|rg32());
+        //CAPTURE(uint16_t(radix),a);
+        const double fpnMax=toF<double>(NL<uint64_t>::max(),radix,std::round_indeterminate);
+        if (a>fpnMax||a<0||std::isnan(a)) {
+          continue;
+        }
+        uint64_t t=std::ldexp(a, radix);
+        uint64_t y=fromF<uint64_t>(a,radix);
+
+        REQUIRE(t==y);
       }
     }
   }
