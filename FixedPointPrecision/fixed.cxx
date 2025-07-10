@@ -24,7 +24,7 @@ template <std::floating_point F,std::integral B>
 struct canFastCvt {// we try to convert directly on all x86 because compiler gives a bunch of instructions(on top of cvtss2si...) and branches.
   static constexpr bool value=//arm and risc-v both have hardware support for unsigned or fixed point conversion.
 #if defined(__x86_64__) || defined(_M_X64)||defined(i386) || defined(__i386__) || defined(__i386) || defined(_M_IX86)
-    sizeof(F) >= sizeof(uintptr_t) && sizeof(B) >= sizeof(uintptr_t) && std::unsigned_integral<B> && NL<F>::is_iec559
+    sizeof(F) >= sizeof(uintptr_t) && sizeof(B) >= sizeof(uintptr_t) && std::unsigned_integral<B> && NL<F>::is_iec559 && (std::endian::native==std::endian::big||std::endian::native==std::endian::little)
 #else
       false
 #endif
@@ -179,6 +179,19 @@ export
       noexcept(noexcept(toF<F>(repr, Radix, Style))) {
       return toF<F>(repr, Radix, Style);
     }
+    constexpr
+    ufx& operator++()
+    noexcept {
+      ++repr;
+      return *this;
+    }
+
+    constexpr
+    ufx operator++(int)const
+    noexcept {
+      return raw(repr++);
+    }
+
     //same with fmod.
   constexpr
     ufx& operator %=(ufx divisor) {
