@@ -94,33 +94,30 @@ template <std::integral T,uint8_t R>
 struct batchFxMul {
   using Tm=decltype(widest<T>());
   static constexpr uint8_t batchSize=NL<std::make_unsigned_t<Tm>>::digits/NL<std::make_unsigned_t<T>>::digits;
-  static_assert(batchSize>0);
+  static_assert(batchSize>1);
   const std::float_round_style s;
   Tm v=1;
   uint8_t c=0;
+
   constexpr
-  batchFxMul& operator =(const batchFxMul&o)
-  noexcept {
-    v=o.v,c=o.c;
-    return *this;
-  }
-  template<class X>
-  constexpr
-  batchFxMul& operator*=(X o)
+  batchFxMul& operator*=(T o)
   noexcept(std::is_unsigned_v<T>) {
-    v*=o.repr;
-    if (++c%batchSize==0)
-      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+    if (c>=batchSize) {
+      v=rnd(v,(batchSize-2)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      c=1;
+    }else
+      ++c;
+    v*=o;
     return *this;
   }
   constexpr
   batchFxMul& operator*=(batchFxMul o)
   noexcept(std::is_unsigned_v<T>) {
-    if ((c%=batchSize)+1>=batchSize) {
-      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+    if (c>=batchSize) {
+      v=rnd(v,(batchSize-2)*NL<std::make_unsigned_t<T>>::digits+R,s);
       c=1;
     }
-    if ((o.c%=batchSize)+c>=batchSize) {
+    if (o.c+c>=batchSize) {
       o.v=rnd(o.v,(o.c-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
       o.c=1;
     }
@@ -128,11 +125,11 @@ struct batchFxMul {
     c+=o.c;
     return *this;
   }
-  template<std::regular X>
+  template <std::copyable X>
   constexpr
-  X operatorT()const
-  noexcept(X::raw(Tm{})) {
-    return X::raw(v);
+  operator X()const
+  noexcept(noexcept(X::raw(T{}))) {
+    return X::raw(rnd(v,(c-1)*NL<std::make_unsigned_t<T>>::digits+R,s));
   }
 };
 /*
@@ -329,7 +326,7 @@ export
     constexpr
     ufx pow(Bone e)const
     noexcept {
-      return static_cast<ufx>(intPow(repr,e,batchFxMul<Bone,Radix>{Style}));
+      return intPow(repr,e,batchFxMul<Bone,Radix>{Style});
     }
   };
 

@@ -26,7 +26,7 @@
  }
 int main()
 {
-  ufx<uint16_t,8> a(1.5f);
+  ufx<uint16_t,8> a(2.f);
    auto b=a.pow(2);
    std::cout<<float(b)<<std::endl;
 }
