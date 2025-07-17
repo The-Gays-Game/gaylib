@@ -26,7 +26,7 @@
  }
 int main()
 {
-#ifdef __has_builtin
-  std::cout<<"hhhh"<<__has_builtin(__builtin_expect);
-#endif
+  uint8_t a=2;
+   uint8_t b=2;
+   std::cout<<int(intExp(a,b,uint8_t{1}))<<std::endl;
 }

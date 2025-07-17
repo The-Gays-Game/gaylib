@@ -185,6 +185,34 @@ import helpers;
               }
           }
       }
+    SECTION("intExp") {
+      using Tmax=std::conditional_t<std::is_unsigned_v<TestType>,uint64_t,int64_t>;
+      if constexpr(std::is_unsigned_v<TestType>) {
+        for (TestType base:dividendSamples) {
+          for (uint8_t e=0;e<=NL<TestType>::digits;++e) {
+            Tmax y=intExp(base,e,Tmax{1});
+            Tmax t=1;
+            for (uint8_t i=0;i<e;++i) {
+              t*=base;
+            }
+            REQUIRE(t==y);
+          }
+        }
+      }else {
+        constexpr uint8_t maxExp=sizeof(Tmax)/sizeof(TestType);
+      for (TestType base:dividendSamples) {
+        for (uint8_t e=0;e<=maxExp;++e) {
+          Tmax y=intExp(base,e,Tmax{1});
+          Tmax t=1;
+          for (uint8_t i=0;i<e;++i) {
+            t*=base;
+          }
+          REQUIRE(t==y);
+        }
+      }
+      }
+
+    }
       if constexpr (std::is_signed_v<TestType>) {
           SECTION("lsDivRnd") {
               for (uint8_t by = 1; by < sizeof(TestType) * CHAR_BIT; ++by) {

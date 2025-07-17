@@ -492,3 +492,20 @@ std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T/*should be
   q.l = a;
   return {q, r1};
 }
+
+template<std::regular Tcalc,std::copyable Tb,std::unsigned_integral Te> requires requires(Tcalc v,Tb b)
+{
+  v*=v;
+  v*=b;
+}
+constexpr
+Tcalc intExp(const Tb base,Te exp,Tcalc r={}){
+  constexpr Te highestSet=NL<std::make_signed_t<Te>>::min();
+  for (uint8_t _=0;_<NL<Te>::digits;++_){
+    r*=r;
+    if (exp>=highestSet)
+      r*=base;
+    exp<<=1;
+  }
+  return r;
+}

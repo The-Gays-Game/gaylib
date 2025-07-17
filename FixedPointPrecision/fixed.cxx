@@ -454,3 +454,42 @@ export
     }
   };
 }
+template <std::integral T,uint8_t R>
+struct batchFxMul {
+  static constexpr uint8_t batchSize=NL<
+#ifdef __SIZEOF_INT128__
+    unsigned __int128
+#else
+      uint64_t
+#endif
+  >::digits/NL<std::make_unsigned_t<T>>::digits;
+  static_assert(batchSize>0);
+  T v=1;
+  const std::float_round_style s;
+  uint8_t c=0;
+  template<class X>
+  constexpr
+  batchFxMul& operator*=(X o)
+  noexcept(std::is_unsigned_v<T>) {
+    v*=o.repr;
+    if (++c%batchSize==0)
+      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+    return *this;
+  }
+  constexpr
+  batchFxMul& operator*=(batchFxMul o)
+  noexcept(std::is_unsigned_v<T>) {
+    c%=batchSize,o.c%=batchSize;
+    if (c+1>=batchSize) {
+      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      c=1;
+    }
+    if (o.c+c>=batchSize) {
+      o.v=rnd(o.v,(o.c-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      o.c=1;
+    }
+    v*=o.v;
+    c+=o.c;
+    return *this;
+  }
+};
