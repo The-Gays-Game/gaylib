@@ -26,7 +26,7 @@
  }
 int main()
 {
-  uint8_t a=2;
-   uint8_t b=2;
-   std::cout<<int(intExp(a,b,uint8_t{1}))<<std::endl;
+  ufx<uint16_t,8> a(1.5f);
+   auto b=a.pow(2);
+   std::cout<<float(b)<<std::endl;
 }

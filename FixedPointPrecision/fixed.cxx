@@ -89,6 +89,52 @@ constexpr
   }
   return std::ldexp(v, radix);
 }
+
+template <std::integral T,uint8_t R>
+struct batchFxMul {
+  using Tm=decltype(widest<T>());
+  static constexpr uint8_t batchSize=NL<std::make_unsigned_t<Tm>>::digits/NL<std::make_unsigned_t<T>>::digits;
+  static_assert(batchSize>0);
+  const std::float_round_style s;
+  Tm v=1;
+  uint8_t c=0;
+  constexpr
+  batchFxMul& operator =(const batchFxMul&o)
+  noexcept {
+    v=o.v,c=o.c;
+    return *this;
+  }
+  template<class X>
+  constexpr
+  batchFxMul& operator*=(X o)
+  noexcept(std::is_unsigned_v<T>) {
+    v*=o.repr;
+    if (++c%batchSize==0)
+      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+    return *this;
+  }
+  constexpr
+  batchFxMul& operator*=(batchFxMul o)
+  noexcept(std::is_unsigned_v<T>) {
+    if ((c%=batchSize)+1>=batchSize) {
+      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      c=1;
+    }
+    if ((o.c%=batchSize)+c>=batchSize) {
+      o.v=rnd(o.v,(o.c-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      o.c=1;
+    }
+    v*=o.v;
+    c+=o.c;
+    return *this;
+  }
+  template<std::regular X>
+  constexpr
+  X operatorT()const
+  noexcept(X::raw(Tm{})) {
+    return X::raw(v);
+  }
+};
 /*
  *Design choices:
  *  what operators are explicit:
@@ -104,7 +150,7 @@ export
 {
   template <class T, uint8_t R> concept testSize = NL<T>::digits >= R;
 
-  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style Style> requires testSize<Bone, Radix> class fx;
+  template <std::signed_integral Bone, uint8_t Radix, std::float_round_style> requires testSize<Bone, Radix> class fx;
 
   //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
   template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
@@ -278,6 +324,12 @@ export
       using Ts=fx<std::make_signed_t<Bone>,Radix,Style>;
       auto [q,r]=sRemQuo(repr,divisor.repr);
       return std::tuple<Bone,Ts>{q,Ts::raw(r)};
+    }
+
+    constexpr
+    ufx pow(Bone e)const
+    noexcept {
+      return static_cast<ufx>(intPow(repr,e,batchFxMul<Bone,Radix>{Style}));
     }
   };
 
@@ -454,42 +506,3 @@ export
     }
   };
 }
-template <std::integral T,uint8_t R>
-struct batchFxMul {
-  static constexpr uint8_t batchSize=NL<
-#ifdef __SIZEOF_INT128__
-    unsigned __int128
-#else
-      uint64_t
-#endif
-  >::digits/NL<std::make_unsigned_t<T>>::digits;
-  static_assert(batchSize>0);
-  T v=1;
-  const std::float_round_style s;
-  uint8_t c=0;
-  template<class X>
-  constexpr
-  batchFxMul& operator*=(X o)
-  noexcept(std::is_unsigned_v<T>) {
-    v*=o.repr;
-    if (++c%batchSize==0)
-      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
-    return *this;
-  }
-  constexpr
-  batchFxMul& operator*=(batchFxMul o)
-  noexcept(std::is_unsigned_v<T>) {
-    c%=batchSize,o.c%=batchSize;
-    if (c+1>=batchSize) {
-      v=rnd(v,(batchSize-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
-      c=1;
-    }
-    if (o.c+c>=batchSize) {
-      o.v=rnd(o.v,(o.c-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
-      o.c=1;
-    }
-    v*=o.v;
-    c+=o.c;
-    return *this;
-  }
-};

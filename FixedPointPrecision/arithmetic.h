@@ -107,6 +107,19 @@ struct rankOf<__int128> {
 
 template <class T> using NL = std::numeric_limits<T>;
 
+template <std::integral T>
+constexpr
+auto widest()
+noexcept {
+#define calcTwo(T_m) typename rankOf<T_m>::two;
+  if constexpr(requires{calcTwo(T)}) {
+    using Tt=calcTwo(T);
+    return widest<Tt>();
+  }else {
+    return T{};
+  }
+#undef calcTwo
+}
 template <std::integral Ta>
 struct aint_dt {
   using Tu = std::make_unsigned_t<Ta>;
@@ -499,7 +512,7 @@ template<std::regular Tcalc,std::copyable Tb,std::unsigned_integral Te> requires
   v*=b;
 }
 constexpr
-Tcalc intExp(const Tb base,Te exp,Tcalc r={}){
+Tcalc intPow(const Tb &base,Te exp,Tcalc r){
   constexpr Te highestSet=NL<std::make_signed_t<Te>>::min();
   for (uint8_t _=0;_<NL<Te>::digits;++_){
     r*=r;
