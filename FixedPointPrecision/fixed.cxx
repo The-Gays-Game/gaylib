@@ -96,14 +96,13 @@ struct batchFxMul {
   static constexpr uint8_t batchSize=NL<std::make_unsigned_t<Tm>>::digits/NL<std::make_unsigned_t<T>>::digits;
   static_assert(batchSize>1);
   const std::float_round_style s;
-  Tm v=1;
-  uint8_t c=0;
-
+  Tm v;
+  uint8_t c=1;
   constexpr
   batchFxMul& operator*=(T o)
   noexcept(std::is_unsigned_v<T>) {
     if (c>=batchSize) {
-      v=rnd(v,(batchSize-2)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      v=rnd(v,(batchSize-1)*R,s);
       c=1;
     }else
       ++c;
@@ -114,22 +113,23 @@ struct batchFxMul {
   batchFxMul& operator*=(batchFxMul o)
   noexcept(std::is_unsigned_v<T>) {
     if (c>=batchSize) {
-      v=rnd(v,(batchSize-2)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      v=rnd(v,(batchSize-1)*R,s);
       c=1;
     }
     if (o.c+c>=batchSize) {
-      o.v=rnd(o.v,(o.c-1)*NL<std::make_unsigned_t<T>>::digits+R,s);
+      o.v=rnd(o.v,(o.c-1)*R,s);
       o.c=1;
     }
     v*=o.v;
     c+=o.c;
     return *this;
   }
-  template <std::copyable X>
+  template <class X>
   constexpr
   operator X()const
-  noexcept(noexcept(X::raw(T{}))) {
-    return X::raw(rnd(v,(c-1)*NL<std::make_unsigned_t<T>>::digits+R,s));
+  noexcept {
+    //uint8_t a=uint8_t(-c)>>7;
+    return X::raw(rnd(v,(c-1)*R,s));
   }
 };
 /*
@@ -236,7 +236,7 @@ export
     }
 
     //same with fmod.
-  constexpr
+    constexpr
     ufx& operator %=(ufx divisor) {
       repr%=divisor.repr;//floor(floor(a*r/b)/r)=floor(a*r/b/r)=floor(a/b) same with trunc
       return *this;
@@ -326,7 +326,9 @@ export
     constexpr
     ufx pow(Bone e)const
     noexcept {
-      return intPow(repr,e,batchFxMul<Bone,Radix>{Style});
+      if constexpr (requires{typename rankOf<Bone>::two;})
+        return intPow(repr,e,batchFxMul<Bone,Radix>{Style,ufx(1).repr});
+      return intPow(*this,e,ufx(1));
     }
   };
 

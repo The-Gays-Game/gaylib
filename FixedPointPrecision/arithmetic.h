@@ -506,7 +506,7 @@ std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T/*should be
   return {q, r1};
 }
 
-template<std::copy_constructible Tcalc,std::integral Tb,std::unsigned_integral Te> requires requires(Tcalc v,Tb b)
+template<std::copy_constructible Tcalc,std::regular Tb,std::unsigned_integral Te> requires requires(Tcalc v,Tb b)
 {
   v*=v;
   v*=b;
