@@ -104,8 +104,8 @@ struct batchFxMul {
     if (c>=batchSize) {
       v=rnd(v,(batchSize-1)*R,s);
       c=1;
-    }else
-      ++c;
+    }
+    ++c;
     v*=o;
     return *this;
   }
@@ -128,7 +128,6 @@ struct batchFxMul {
   constexpr
   operator X()const
   noexcept {
-    //uint8_t a=uint8_t(-c)>>7;
     return X::raw(rnd(v,(c-1)*R,s));
   }
 };
@@ -152,6 +151,7 @@ export
   //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
   template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
   struct ufx {
+    static constexpr std::enable_if_t<Radix==NL<Bone>::digits,ufx> MulId;
     Bone repr;
 
     constexpr
@@ -326,9 +326,22 @@ export
     constexpr
     ufx pow(Bone e)const
     noexcept {
-      if constexpr (requires{typename rankOf<Bone>::two;})
-        return intPow(repr,e,batchFxMul<Bone,Radix>{Style,ufx(1).repr});
-      return intPow(*this,e,ufx(1));
+      if (Radix==NL<Bone>::digits) {
+#ifdef checkArgs
+        if (e==0)
+          throw std::overflow_error("x^0==1 outside of range.");
+#elif __has_builtin(__builtin_assume)
+        __builtin_assume(e>0);
+#endif
+        if constexpr(requires{typename rankOf<Bone>::two;}) {
+          return intPow(repr,e,batchFxMul<Bone,Radix>{Style,1,0});
+        }
+        return intPow(*this,Bone(e-1),*this);
+      }else {
+        if constexpr (requires{typename rankOf<typename rankOf<Bone>::two>::two;})
+          return intPow(repr,e,batchFxMul<Bone,Radix>{Style,ufx(1).repr});
+        return intPow(*this,e,ufx(1));
+      }
     }
   };
 
