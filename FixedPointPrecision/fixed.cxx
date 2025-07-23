@@ -6,15 +6,13 @@ module;
 #include<utility>
 #include<algorithm>
 #include <cmath>
+#include<stdexcept>
 export module fixed;
 #ifdef t_fixed_cxx
 #undef t_fixed_cxx
 #define cexport export
 #else
 #define cexport
-#endif
-#ifdef checkArgs
-#define exceptMath
 #endif
 template <std::floating_point F> using Tbits=std::conditional_t<sizeof(F) == 4, uint32_t,
 #ifdef __SIZEOF_INT128__
@@ -221,9 +219,9 @@ export
     constexpr
     explicit ufx(ufx<Bone, P1, Style> o)
       noexcept: repr(o.repr) {
-      if (Radix > P1)
+      if constexpr(Radix > P1)
         repr <<= Radix - P1;
-      else if (Radix < P1)
+      else if constexpr(Radix < P1)
         repr = rnd(repr, P1 - Radix, Style);
     }
 
@@ -273,7 +271,7 @@ export
         repr = divRnd(repr, divisor.repr, Style);
       else if constexpr (requires { typename rankOf<Bone>::two; }) {
         typename rankOf<Bone>::two dividend = repr;
-        repr = divRnd<typename rankOf<Bone>::two>(dividend << Radix, divisor.repr, Style);
+        repr = divRnd<typename rankOf<Bone>::two>(decltype(dividend)(dividend << Radix), divisor.repr, Style);
       } else {
         uint8_t shift = std::countl_zero(divisor.repr);
         divisor.repr <<= shift;
@@ -292,10 +290,11 @@ export
     constexpr
     ufx &operator*=(ufx o)
       noexcept {
+      using Tmul=std::common_type_t<uint32_t,Bone>;
       if (Radix == 0)
-        repr *= o.repr;
+        repr *= Tmul(o.repr);
       else if constexpr (requires { typename rankOf<Bone>::two; }) {
-        typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
+        typename rankOf<Bone>::two a = Tmul(typename rankOf<Bone>::two(repr)) * o.repr;
         repr = aint_dt<Bone>(a).narrowRnd(Radix, Style);
       } else {
         aint_dt<Bone> a = wideMul(repr, o.repr);
@@ -346,28 +345,32 @@ export
     }
 
     constexpr
-    ufx pow(std::make_signed_t<Bone> e)const
-#ifdef exceptMath
+    ufx pow(std::conditional_t<Radix%NL<Bone>::digits==0,Bone,std::make_signed_t<Bone>> e)const
+#ifndef checkArgs
     noexcept
 #endif
     {
       if (Radix==NL<Bone>::digits) {
-#ifdef exceptMath
-        if (e<=0)
-          throw std::overflow_error("x^(a<=0)>=1 outside of range.");
+#ifdef checkArgs
+        if (e==0)
+          throw std::overflow_error("x^0==1 outside of range.");
 #elif __has_builtin(__builtin_assume)
         __builtin_assume(e>0);
 #endif
         return intPow(repr,e,batchFxMul<Bone,Radix>{1,Style,0});
-      }else if (Radix==0) {
-        if (e<0) {
-          if ()
-        }
-      }
-      else{
+      } else{
+        bool negE=e<0;
+#ifdef checkArgs
+        if (repr==0&&negE)
+          throw std::domain_error("0^(a<0) is undefined.");
+#endif
+        Bone absE=condNeg<Bone>(e,negE);
+        ufx a;
         if constexpr (requires{typename rankOf<typename rankOf<Bone>::two>::two;})
-          return intPow(repr,e,batchFxMul<Bone,Radix>{ufx(1).repr,Style});
-        return intPow(*this,e,ufx(1));
+          a=intPow(repr,absE,batchFxMul<Bone,Radix>{ufx(1).repr,Style});
+        else
+          a=intPow(*this,absE,ufx(1));
+        return negE?ufx(1)/a:a;
       }
     }
   };

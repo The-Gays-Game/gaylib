@@ -34,7 +34,10 @@ int main()
   // auto d=c.pow(1);
   // std::cout<<double(d)<<std::endl;
 
-   ufx<uint8_t,0>e(2);
-   auto f=e.pow(2);
-   std::cout<<uint16_t(uint8_t(f))<<std::endl;
+   ufx<uint16_t,16>e=ufx<uint16_t,16>::raw(31259);
+   auto f=e.pow(4);
+   std::cout<<f.repr<<std::endl;
+
+   unsigned __int128 a=e.repr;
+   std::cout<<uint16_t(intPow<unsigned __int128>(a,uint8_t(4),1)>>48);
 }
