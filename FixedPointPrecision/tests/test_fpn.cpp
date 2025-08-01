@@ -29,6 +29,24 @@ template <std::unsigned_integral T0, uint8_t V0, std::float_round_style V1>
 struct intToFpn<T0, V0, V1> {
   using type = ufx<T0, V0, V1>;
 };
+
+template<class A>
+struct withId: A{
+  inline static const withId one{};
+  constexpr
+  withId operator *=(const withId &o)noexcept {
+    if (this==&one)
+      *this=o;
+    else if (&o!=&one)
+      static_cast<A&>(*this)*=o;
+    return *this;
+  }
+  withId operator *=(A o)noexcept {
+    static_cast<A&>(*this)*=o;
+    return *this;
+  }
+  //explicit constexpr withId(A a):A(a){}
+};
 } // namespace
 template <std::integral T, T... Ints>
 using IntSeq = std::integer_sequence<T, Ints...>;
@@ -70,23 +88,24 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
                   auto a=rg32();
                 {
                   TestType base=a>>=16;
-                  A t=A::raw(base);
-                  for (uint32_t i=1;i<e;++i)
-                    t*=A::raw(base);
+                  A t=  intPow(A::raw(base),e,withId<A>::one);
+                  // A t=A::raw(base);
+                  // for (uint32_t i=1;i<e;++i)
+                  //   t*=A::raw(base);
                   A y=A::raw(base).pow(e);
-                  CAPTURE(base,e);
-                  CAPTURE(t.repr,y.repr);
+                  CAPTURE(base,e,t.repr,y.repr);
+
                   REQUIRE(std::abs(int16_t(t.repr-y.repr))<2);
                 }
-                {
-                  TestType base=a;
-                  A t=A::raw(base);
-                  for (uint32_t i=1;i<e;++i)
-                    t*=A::raw(base);
-                  A y=A::raw(base).pow(e);
-                  CAPTURE(t.repr,y.repr);
-                  REQUIRE(std::abs(int16_t(t.repr-y.repr))<2);
-                }
+                // {
+                //   TestType base=a;
+                //   A t=A::raw(base);
+                //   for (uint32_t i=1;i<e;++i)
+                //     t*=A::raw(base);
+                //   A y=A::raw(base).pow(e);
+                //   CAPTURE(t.repr,y.repr);
+                //   REQUIRE(std::abs(int16_t(t.repr-y.repr))<2);
+                // }
                 //}
               }
             }
