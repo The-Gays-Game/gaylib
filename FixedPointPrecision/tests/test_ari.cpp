@@ -185,24 +185,36 @@ import helpers;
               }
           }
       }
-    SECTION("intExp") {
+    SECTION("intPow") {
       using Tmax=std::conditional_t<std::is_unsigned_v<TestType>,uint64_t,int64_t>;
       if constexpr(std::is_unsigned_v<TestType>) {
+      //   for (TestType base:dividendSamples) {
+      //   for (uint16_t e=1;e<=NL<uint8_t>::max();++e) {
+      //     TestType a=intPow<TestType>(base,e,1);
+      //     TestType b=intPow<TestType,uint16_t>(base,e-1,base);
+      //     CAPTURE(base, e);
+      //     REQUIRE(a==b);
+      //   }
+      // }
         for (TestType base:dividendSamples) {
           for (uint8_t e=0;e<=NL<TestType>::digits;++e) {
-            Tmax y=intExp(base,e,Tmax{1});
+            Tmax y=intPow(Tmax{base},e,true);
             Tmax t=1;
             for (uint8_t i=0;i<e;++i) {
               t*=base;
             }
             REQUIRE(t==y);
           }
+          for (uint16_t e=1;e<=NL<uint8_t>::max();++e) {
+            TestType a=intPow(base,e,true),b=intPow(base,e,false);
+            REQUIRE(a==b);
+          }
         }
       }else {
         constexpr uint8_t maxExp=sizeof(Tmax)/sizeof(TestType);
       for (TestType base:dividendSamples) {
         for (uint8_t e=0;e<=maxExp;++e) {
-          Tmax y=intExp(base,e,Tmax{1});
+          Tmax y=intPow(Tmax{base},e,true);
           Tmax t=1;
           for (uint8_t i=0;i<e;++i) {
             t*=base;

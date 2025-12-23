@@ -106,7 +106,13 @@ struct rankOf<__int128> {
 #endif
 
 template <class T> using NL = std::numeric_limits<T>;
-
+/*template <std::integral T> using wide=std::conditional_t<std::unsigned_integral<T>,
+#ifdef __SIZEOF_INT128__
+  unsigned __int128,__int128
+#else
+uint64_t,int64_t
+#endif
+>;
 template <std::integral T>
 constexpr
 auto widest()
@@ -119,7 +125,7 @@ noexcept {
     return T{};
   }
 #undef calcTwo
-}
+}*/
 template <std::integral Ta>
 struct aint_dt {
   using Tu = std::make_unsigned_t<Ta>;
@@ -422,7 +428,7 @@ std::tuple<Ta, std::make_signed_t<Ta> > sRemQuo(const Ta dividend, const Ta divi
       if (absR>=divisor&&absR-divisor>NL<Ts>::max())
         throw std::overflow_error("modified rem too big.");
       if (absR<divisor&&divisor-absR>Ta(-Ta(NL<Ts>::min())))
-        throw std::underflow_error("modified rem too small.");;
+        throw std::underflow_error("modified rem too small.");
 #endif
       ++q;
       r-=divisor;
@@ -506,19 +512,18 @@ std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T/*should be
   return {q, r1};
 }
 
-template<std::copy_constructible Tcalc,std::regular Tb,std::unsigned_integral Te> requires requires(Tcalc v,Tb b)
+template<std::regular Tb,std::unsigned_integral Te> requires requires(Tb b)
 {
-  v*=v;
-  v*=b;
+  b*=b;
+  Tb{1};
 }
 constexpr
-Tcalc intPow(const Tb base,Te exp,Tcalc r){
-  constexpr Te highestSet=NL<std::make_signed_t<Te>>::min();
-  for (uint8_t _=0;_<NL<Te>::digits;++_){
+Tb intPow(const Tb base,const Te exp,bool support0){
+  Tb r=support0?Tb{1}:base;
+  for (int8_t i=NL<Te>::digits-1-std::countl_zero(exp)-!support0;i>-1;--i){
     r*=r;
-    if (exp>=highestSet)
+    if ((exp>>i&1)==1)
       r*=base;
-    exp<<=1;
   }
   return r;
 }

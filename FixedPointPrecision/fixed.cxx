@@ -89,48 +89,6 @@ constexpr
   }
   return std::ldexp(v, radix);
 }
-
-template <std::integral T,uint8_t R>
-struct batchFxMul {
-  using Tm=decltype(widest<T>());
-  static constexpr uint8_t batchSize=NL<std::make_unsigned_t<Tm>>::digits/NL<std::make_unsigned_t<T>>::digits;
-  static_assert(batchSize>1);
-  const std::float_round_style s;
-  Tm v;
-  uint8_t c=1;
-  constexpr
-  batchFxMul& operator*=(T o)
-  noexcept(std::is_unsigned_v<T>) {
-    if (c>=batchSize) {
-      v=rnd(v,(batchSize-1)*R,s);
-      c=1;
-    }
-    ++c;
-    v*=o;
-    return *this;
-  }
-  constexpr
-  batchFxMul& operator*=(batchFxMul o)
-  noexcept(std::is_unsigned_v<T>) {
-    if (c>=batchSize) {
-      v=rnd(v,(batchSize-1)*R,s);
-      c=1;
-    }
-    if (o.c+c>=batchSize) {
-      o.v=rnd(o.v,(o.c-1)*R,s);
-      o.c=1;
-    }
-    v*=o.v;
-    c+=o.c;
-    return *this;
-  }
-  template <class X>
-  constexpr
-  operator X()const
-  noexcept {
-    return X::raw(rnd(v,(c-1)*R,s));
-  }
-};
 /*
  *Design choices:
  *  what operators are explicit:
@@ -151,7 +109,6 @@ export
   //Radix is how many bits the decimal point is from the decimal point of integer (right of LSB).
   template <std::unsigned_integral Bone, uint8_t Radix, std::float_round_style Style = std::round_toward_zero> requires testSize<Bone, Radix> //radix==0 is equivalent to int.
   struct ufx {
-    static constexpr std::enable_if_t<Radix==NL<Bone>::digits,ufx> MulId;
     Bone repr;
 
     constexpr
@@ -324,7 +281,7 @@ export
     }
 
     constexpr
-    ufx pow(Bone e)const
+    ufx pow(std::conditional_t<(sizeof (Bone)>sizeof (uint16_t)), uint16_t,Bone>e)const
     noexcept {
       if (Radix==NL<Bone>::digits) {
 #ifdef checkArgs
@@ -333,14 +290,9 @@ export
 #elif __has_builtin(__builtin_assume)
         __builtin_assume(e>0);
 #endif
-        if constexpr(requires{typename rankOf<Bone>::two;}) {
-          return intPow(repr,e,batchFxMul<Bone,Radix>{Style,1,0});
-        }
-        return intPow(*this,Bone(e-1),*this);
+        return intPow(*this,e,false);
       }else {
-        if constexpr (requires{typename rankOf<typename rankOf<Bone>::two>::two;})
-          return intPow(repr,e,batchFxMul<Bone,Radix>{Style,ufx(1).repr});
-        return intPow(*this,e,ufx(1));
+        return intPow(*this,e,true);
       }
     }
   };
@@ -516,5 +468,21 @@ export
       auto [q,r]=sRemQuo(repr,divisor.repr);
       return {q,raw(r)};
     }
+
+    constexpr
+    fx pow(std::conditional_t<(sizeof (Bone)>sizeof(int16_t)),uint16_t,std::make_unsigned_t<Bone>> e)const {
+      if (Radix==NL<Bone>::digits) {
+#ifdef checkArgs
+        if (e==0)
+          throw std::overflow_error("x^0==1 outside of range.");
+#elif __has_builtin(__builtin_assume)
+        __builtin_assume(e>0);
+#endif
+        return intPow(*this,e,false);
+      }else {
+        return intPow(*this,e,true);
+      }
+    }
+
   };
 }

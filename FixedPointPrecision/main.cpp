@@ -8,44 +8,54 @@
 #include<iomanip>
 #include<cfenv>
 #include "arithmetic.h"
+#include<chrono>
+#include<random>
  import fixed;
- void test1() {
-   using A=fx<int16_t,10,std::round_to_nearest>;
-   std::fesetround(FE_TONEAREST);
-   auto a=A::raw(30656),b=A::raw(1443);
-   float af=a,bf=b;
-   std::cout<<std::setprecision(9)<<float(af)<<" "<<float(bf)<<std::endl;
-   auto c=a/b;
-   auto cf=af/bf;
-   std::cout<<std::setprecision(9)<<float(c)<<" "<<std::setprecision(9)<<std::ldexp(double(af)/double(bf),10)<<std::endl;
-
-   auto d=A::br(cf*(1<<10));
-   std::cout<<std::setprecision(9)<<float(A(cf))<<" "<<std::lrint(cf*(1<<10))<<std::endl;
-   std::cout<<std::format("{:16b} {:16b}",c.repr,d.repr)<<std::endl;
-   std::cout<<c.repr<<" "<<d.repr<<std::endl;
- }
+uint32_t side;
+std::mt19937 rg;
+/*void test0(size_t a,size_t b) {
+  ufx<uint32_t,16> c;
+  c.repr=rg();
+  for (size_t i=0;i<a;++i) {
+    c=c.pow(b);
+  }
+  side=c.repr;
+}
+void test1(size_t a,size_t b) {
+  ufx<uint32_t,16> c;
+  c.repr=rg();
+  for (size_t i=0;i<a;++i) {
+    c=intPow(c,b,ufx<uint32_t,16>(1));
+  }
+  side=c.repr;
+}
+ void time() {
+  const size_t n=10000,e=1024,all=10000;
+  uint64_t t=0;
+  for (int i=0;i<all;++i) {
+    auto begin=std::chrono::steady_clock::now();
+    test0(n,rg()%e);
+    t+=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()- begin).count();
+  }
+  std::cout<<t/all<<std::endl;
+  t=0;
+  for (int i=0;i<all;++i) {
+    auto begin=std::chrono::steady_clock::now();
+    test1(n,rg()%e);
+    t+=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()- begin).count();
+  }
+  std::cout<<t/all<<std::endl;
+  std::cout<<side;
+ }*/
 int main()
 {
-  // ufx<uint16_t,8> a(1.5f);
-  //  auto b=a.pow(0);
-  //  std::cout<<float(b)<<std::endl;
-  //
-  //  ufx<unsigned __int128,64> c(1.5f);
-  //  auto d=c.pow(3);
-  //  std::cout<<double(d)<<std::endl;
+  using A=ufx<uint16_t,15,std::round_to_nearest>;
+  A a=A::raw(182);
+  std::cout<<float(a)<<' '<<float(A(1))<<std::endl;
+  uint8_t e=2;
+  std::cout<<int(intPow(a,e,true).repr)<<" "<<int(intPow(a,e,false).repr)<<std::endl;
+  //std::cout<<float(intPow(a,uint8_t(e*3),A(1)))<<" "<<float(intPow(a,e,a));
 
-   //weird at 158,159,160.
-   auto e=ufx<uint8_t,8,std::round_toward_zero>::raw(0xff);
-   std::cout<<std::setprecision(9)<<double(e)<<std::endl;
-   // auto f0=e.pow(158);
-   // auto f1=f0*e;
-   // auto f2=f1*e;
-   // std::cout<<double(f0)<<' '<<double(f1)<<' '<<double(f2)<<std::endl;
-   // std::cout<<double(e.pow(159))<<' '<<double(e.pow(160));
-   for (uint16_t i=128;i<256;++i) {
-     auto f=e.pow(i);
-     std::cout<<i<<' '<<std::setprecision(9)<<double(f)<<std::endl;
-   }
 
 
 }
