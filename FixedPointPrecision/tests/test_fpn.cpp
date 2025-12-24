@@ -29,6 +29,24 @@ template <std::unsigned_integral T0, uint8_t V0, std::float_round_style V1>
 struct intToFpn<T0, V0, V1> {
   using type = ufx<T0, V0, V1>;
 };
+
+template<class A>
+struct withId: A{
+  inline static const withId one{};
+  constexpr
+  withId operator *=(const withId &o)noexcept {
+    if (this==&one)
+      *this=o;
+    else if (&o!=&one)
+      static_cast<A&>(*this)*=o;
+    return *this;
+  }
+  withId operator *=(A o)noexcept {
+    static_cast<A&>(*this)*=o;
+    return *this;
+  }
+  //explicit constexpr withId(A a):A(a){}
+};
 } // namespace
 template <std::integral T, T... Ints>
 using IntSeq = std::integer_sequence<T, Ints...>;
@@ -44,6 +62,56 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
         float y = toF<float>(repr, radix, styleEnumMap[mode]);
         REQUIRE(t == y);
       }
+    }
+  }
+  SECTION("pow") {
+    constexpr auto radixes = std::make_integer_sequence<uint8_t, NL<TestType>::digits+1>{};
+    if constexpr(std::is_unsigned_v<TestType>) {
+      [radixes]<uint8_t ... sis>(IntSeq<uint8_t, sis...>) {
+        ([]<uint8_t ... r0>(IntSeq<uint8_t, r0...>, auto si) {
+          constexpr std::float_round_style se = styleEnumMap[si];
+          std::fesetround(styleMacroMap[si]);
+          ([se](auto radix0) {
+            using A = intToFpn<TestType, radix0, se>::type;
+            if constexpr(radix0==0) {
+              for (uint16_t _=0;_<1024;++_) {
+                auto a=rg32();
+                TestType base=a,e=a>>16;
+                CAPTURE(base,e);
+                TestType t=intPow<uint32_t>(base,e,1);
+                TestType y=A(base).pow(e).repr;
+                REQUIRE(t==y);
+              }
+            }else if constexpr(radix0==NL<TestType>::digits) {
+              for (uint32_t e=1;e<=NL<uint16_t>::max();++e) {
+                //for (uint8_t j=0;j<1;++j) {
+                  auto a=rg32();
+                {
+                  TestType base=a>>=16;
+                  A t=  intPow(A::raw(base),e,withId<A>::one);
+                  // A t=A::raw(base);
+                  // for (uint32_t i=1;i<e;++i)
+                  //   t*=A::raw(base);
+                  A y=A::raw(base).pow(e);
+                  CAPTURE(base,e,t.repr,y.repr);
+
+                  REQUIRE(std::abs(int16_t(t.repr-y.repr))<2);
+                }
+                // {
+                //   TestType base=a;
+                //   A t=A::raw(base);
+                //   for (uint32_t i=1;i<e;++i)
+                //     t*=A::raw(base);
+                //   A y=A::raw(base).pow(e);
+                //   CAPTURE(t.repr,y.repr);
+                //   REQUIRE(std::abs(int16_t(t.repr-y.repr))<2);
+                // }
+                //}
+              }
+            }
+          }(std::integral_constant<uint8_t, r0>{}), ...);
+        }(radixes, std::integral_constant<int8_t, sis>{}), ...);
+      }(std::make_integer_sequence<uint8_t, std::size(styleEnumMap)>{});
     }
   }
   constexpr auto radixes = std::make_integer_sequence<uint8_t, NL<TestType>::digits>{};
@@ -64,7 +132,6 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
       }(radixes);
     }
   }
-
   using Tu = std::make_unsigned_t<TestType>;
   SECTION("ctor change radix") {
     []<uint8_t... r0>(IntSeq<uint8_t, r0...> radixes) {
@@ -84,9 +151,9 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
                       REQUIRE(A(b).repr == a.repr);
                       REQUIRE(static_cast<float>(a) == static_cast<float>(b));
                     } else {
-                      if (radix1 > radix0) {
+                      if constexpr(radix1 > radix0) {
                         REQUIRE(b.repr == TestType(a.repr << (radix1 - radix0)));
-                      } else if (radix1 < radix0) {
+                      } else if constexpr (radix1 < radix0) {
                         REQUIRE(b.repr == rnd(a.repr, radix0 - radix1, se));
                       }
                     }
