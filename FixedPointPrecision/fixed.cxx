@@ -226,9 +226,9 @@ export
 
     constexpr
     ufx &operator*=(ufx o)
-      noexcept {
+      noexcept(!(Radix==0&&std::same_as<Bone,unsigned short>&&NL<unsigned short>::digits<=NL<int>::digits)) {
       if (Radix == 0)
-        repr *= o.repr;
+        repr *= o.repr;//can overflow when uint16_t, but this behavior is consistent with uint16_t's behavior.
       else if constexpr (requires { typename rankOf<Bone>::two; }) {
         typename rankOf<Bone>::two a = typename rankOf<Bone>::two(repr) * o.repr;
         repr = aint_dt<Bone>(a).narrowRnd(Radix, Style);

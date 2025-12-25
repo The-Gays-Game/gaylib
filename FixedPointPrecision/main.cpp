@@ -49,8 +49,8 @@ void test1(size_t a,size_t b) {
  }*/
 int main()
 {
-  using A=ufx<uint16_t,15,std::round_to_nearest>;
-  A a=A::raw(182);
+  using A=ufx<uint16_t,16,std::round_to_nearest>;
+  A a=A::raw(65535);
   std::cout<<float(a)<<' '<<float(A(1))<<std::endl;
   uint8_t e=2;
   std::cout<<int(intPow(a,e,true).repr)<<" "<<int(intPow(a,e,false).repr)<<std::endl;
