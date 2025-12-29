@@ -241,7 +241,7 @@ export
 
     constexpr
     auto operator*(ufx o) const
-      noexcept {
+      noexcept(noexcept(o*=o)) {
       return ufx(*this) *= o;
     }
 
@@ -282,7 +282,7 @@ export
 
     constexpr
     ufx pow(std::conditional_t<(sizeof (Bone)>sizeof (uint16_t)), uint16_t,Bone>e)const
-    noexcept {
+    noexcept(noexcept(ufx(1)*=ufx(1))) {
       if (Radix==NL<Bone>::digits) {
 #ifdef checkArgs
         if (e==0)

@@ -7,7 +7,7 @@ option(CATCH_CONFIG_WINDOWS_SEH ON)
 FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG        2b60af89e23d28eefc081bc930831ee9d45ea58b#v3.8.1
+        GIT_TAG        88abf9bf325c798c33f54f6b9220ef885b267f4f#v3.12
 )
 FetchContent_MakeAvailable(Catch2)
 #configure_file(${catch2_SOURCE_DIR}/extras/gdbinit ${CMAKE_CURRENT_SOURCE_DIR}/.gdbinit)
