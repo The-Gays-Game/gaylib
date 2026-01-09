@@ -49,13 +49,10 @@ void test1(size_t a,size_t b) {
  }*/
 int main()
 {
-  using A=ufx<uint16_t,16,std::round_to_nearest>;
-  A a=A::raw(65535);
-  std::cout<<float(a)<<' '<<float(A(1))<<' '<<noexcept(a*A(1))<<std::endl;
-  uint8_t e=2;
-  std::cout<<int(intPow(a,e,true).repr)<<" "<<int(intPow(a,e,false).repr)<<std::endl;
-  //std::cout<<float(intPow(a,uint8_t(e*3),A(1)))<<" "<<float(intPow(a,e,a));
-
-
-
+  aint_dt<int8_t> b(int16_t(-129));
+  std::cout<<(b-=uint8_t(255)).merge()<<std::endl;
+  using A=ufx<uint16_t,0,std::round_toward_infinity>;
+  A a(6);
+  //std::cout<<(uint64_t(a.sqrt().repr))<<std::endl;
+  std::cout<<uRoot2(uint16_t{7},std::round_to_nearest);
 }

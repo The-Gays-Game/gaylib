@@ -188,17 +188,9 @@ import helpers;
     SECTION("intPow") {
       using Tmax=std::conditional_t<std::is_unsigned_v<TestType>,uint64_t,int64_t>;
       if constexpr(std::is_unsigned_v<TestType>) {
-      //   for (TestType base:dividendSamples) {
-      //   for (uint16_t e=1;e<=NL<uint8_t>::max();++e) {
-      //     TestType a=intPow<TestType>(base,e,1);
-      //     TestType b=intPow<TestType,uint16_t>(base,e-1,base);
-      //     CAPTURE(base, e);
-      //     REQUIRE(a==b);
-      //   }
-      // }
         for (TestType base:dividendSamples) {
           for (uint8_t e=0;e<=NL<TestType>::digits;++e) {
-            Tmax y=intPow(Tmax{base},e,true);
+            Tmax y=APowU(Tmax{base},e,true);
             Tmax t=1;
             for (uint8_t i=0;i<e;++i) {
               t*=base;
@@ -206,7 +198,7 @@ import helpers;
             REQUIRE(t==y);
           }
           for (uint16_t e=1;e<=NL<uint8_t>::max();++e) {
-            TestType a=intPow(base,e,true),b=intPow(base,e,false);
+            TestType a=APowU(base,e,true),b=APowU(base,e,false);
             REQUIRE(a==b);
           }
         }
@@ -214,7 +206,7 @@ import helpers;
         constexpr uint8_t maxExp=sizeof(Tmax)/sizeof(TestType);
       for (TestType base:dividendSamples) {
         for (uint8_t e=0;e<=maxExp;++e) {
-          Tmax y=intPow(Tmax{base},e,true);
+          Tmax y=APowU(Tmax{base},e,true);
           Tmax t=1;
           for (uint8_t i=0;i<e;++i) {
             t*=base;
@@ -243,6 +235,18 @@ import helpers;
                   }
               }
           }
+      }else {
+        SECTION("uRoot2") {
+          for (uint8_t j=0;j<std::size(styleMacroMap);++j) {
+            std::fesetround(styleMacroMap[j]);
+            for (Tt i=1;i<=NL<TestType>::max();++i) {
+              //CAPTURE(i,styleEnumMap[j],j);
+              TestType t=std::lrintf(std::sqrt(static_cast<float>(i)));
+              TestType y=uRoot2(i,styleEnumMap[j]);
+              REQUIRE(t==y);
+            }
+          }
+        }
       }
   }
 
@@ -271,19 +275,19 @@ import helpers;
           REQUIRE_THROWS_AS(wideLS(0,0), std::domain_error);
       }
       using Th = typename rankOf<TestType>::half;
-      SECTION("aint_dt op+=") {
-          for (const auto &l: samples) {
-              const TestType a = std::min<Tt>(Tt{NL<TestType>::max()} - l, NL<std::make_unsigned_t<Th> >::max()) + 1;
-              for (TestType r = 0; r < a; ++r) {
-                  CAPTURE(l, r);
-                  TestType t = l + r;
-                  aint_dt<Th> b(l);
-                  b += r;
-                  TestType y = b.merge();
-                  REQUIRE(t==y);
-              }
-          }
-      }
+      // SECTION("aint_dt op+=") {
+      //     for (const auto &l: samples) {
+      //         const TestType a = std::min<Tt>(Tt{NL<TestType>::max()} - l, NL<std::make_unsigned_t<Th> >::max()) + 1;
+      //         for (TestType r = 0; r < a; ++r) {
+      //             CAPTURE(l, r);
+      //             TestType t = l + r;
+      //             aint_dt<Th> b(l);
+      //             b += r;
+      //             TestType y = b.merge();
+      //             REQUIRE(t==y);
+      //         }
+      //     }
+      // }
       SECTION("aint_dt op>>=") {
           const auto byIt = SV::iota(uint8_t{0}, static_cast<uint8_t>(sizeof(TestType) * CHAR_BIT));
           for (auto it = CartIter(samples.begin(), samples.end(), byIt.begin(), byIt.end()); it != it.end; ++it) {
@@ -381,6 +385,12 @@ import helpers;
               REQUIRE(tq==yq);
               REQUIRE(tr==yr);
           }
+        SECTION("uRoot2") {
+            std::fesetround(FE_TONEAREST);
+            TestType t=std::lrint(std::sqrt(static_cast<double>(samples[0])));
+            TestType y=uRoot2(samples[0],std::round_to_nearest);
+            REQUIRE(t==y);
+          }
       }
       SECTION("aint_dt op>>=") {
           using Th = typename rankOf<TestType>::half;
@@ -395,20 +405,20 @@ import helpers;
               REQUIRE(t==y);
           }
       }
-      SECTION("aint_dt op+=") {
-          using Tu = std::make_unsigned_t<TestType>;
-          for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++
-               it) {
-              const auto [a,b] = *it;
-              Tt l = static_cast<Tt>(a) * b;
-              Tu r = Tu{1} << NL<Tu>::digits - 1;
-              aint_dt<TestType> c(l);
-              c += r;
-              Tt t = l + r;
-              Tt y = c.merge();
-              REQUIRE(t==y);
-          }
-      }
+      // SECTION("aint_dt op+=") {
+      //     using Tu = std::make_unsigned_t<TestType>;
+      //     for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++
+      //          it) {
+      //         const auto [a,b] = *it;
+      //         Tt l = static_cast<Tt>(a) * b;
+      //         Tu r = Tu{1} << NL<Tu>::digits - 1;
+      //         aint_dt<TestType> c(l);
+      //         c += r;
+      //         Tt t = l + r;
+      //         Tt y = c.merge();
+      //         REQUIRE(t==y);
+      //     }
+      // }
       SECTION("wideMul") {
           for (auto it = CartIter(samples.begin(), samples.end(), samples.begin(), samples.end()); it != it.end; ++
                it) {

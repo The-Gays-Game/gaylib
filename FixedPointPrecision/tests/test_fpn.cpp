@@ -78,7 +78,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
                 auto a=rg32();
                 TestType base=a,e=a>>16;
                 CAPTURE(base,e);
-                TestType t=intPow<uint32_t>(base,e,1);
+                TestType t=APowU<uint32_t>(base,e,1);
                 TestType y=A(base).pow(e).repr;
                 REQUIRE(t==y);
               }
@@ -88,7 +88,7 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
                   auto a=rg32();
                 {
                   TestType base=a>>=16;
-                  A t=  intPow(A::raw(base),e,withId<A>::one);
+                  A t=  APowU(A::raw(base),e,withId<A>::one);
                   // A t=A::raw(base);
                   // for (uint32_t i=1;i<e;++i)
                   //   t*=A::raw(base);

@@ -89,6 +89,8 @@ constexpr
   }
   return std::ldexp(v, radix);
 }
+
+
 /*
  *Design choices:
  *  what operators are explicit:
@@ -129,10 +131,10 @@ export
 
     //conversion from float point is narrowing even causing undefined behaviors depending on exponent.
 #ifdef FP_MANIP_CE
-        constexpr
+    constexpr
 #endif
-    explicit ufx(std::floating_point auto v)
-      noexcept(noexcept(fromF<Bone>(v,Radix))): repr(fromF<Bone>(v,Radix)) {
+explicit ufx(std::floating_point auto v)
+  noexcept(noexcept(fromF<Bone>(v,Radix))): repr(fromF<Bone>(v,Radix)) {
     }
 
 #define use_lrint NL<Bone>::digits<=NL<long>::digits
@@ -281,18 +283,51 @@ export
     }
 
     constexpr
-    ufx pow(std::conditional_t<(sizeof (Bone)>sizeof (uint16_t)), uint16_t,Bone>e)const
-    noexcept(noexcept(ufx(1)*=ufx(1))) {
-      if (Radix==NL<Bone>::digits) {
-#ifdef checkArgs
-        if (e==0)
-          throw std::overflow_error("x^0==1 outside of range.");
-#elif __has_builtin(__builtin_assume)
-        __builtin_assume(e>0);
-#endif
-        return intPow(*this,e,false);
+    ufx sqrt()const
+    noexcept(noexcept(ufx()*=ufx())) {
+      if (repr==0)
+        return ufx();
+      if constexpr (false/*requires { typename rankOf<Bone>::two; }*/) {
+        using Tt=rankOf<Bone>::two;
+        return raw(uRoot2<Tt>(Tt(repr)<<Radix,Style));
       }else {
-        return intPow(*this,e,true);
+        using Th=rankOf<Bone>::half;
+        uint8_t shift=std::countl_zero(repr)+NL<Bone>::digits;
+        shift= shift & ~1 | Radix & 1;
+        auto a=wideLS(repr,shift);
+        shift-=Radix;
+        Bone s=uRoot2(a.h,std::round_toward_zero);
+        Bone r=a.h-s*s;
+        const aint_dt<Th>l(a.l);
+        const Bone b=aint_dt<Th>(r,l.h).merge();
+        s*=2;
+        const Bone q=b/s;
+        r=aint_dt<Th>(b%s,l.l).merge()-q*q;
+        s=q| s << (NL<Th>::digits -1);
+
+        if (Style==std::round_indeterminate)
+          s>>= shift / 2;
+        else {
+          using Ts=std::make_signed_t<Bone>;
+          if (Style==std::round_toward_infinity) {
+            aint_dt<Ts>r1;
+            if (Ts(r)<0)
+              r1=std::bit_cast<decltype(r1)>(wideLS(s--,1))-(1-r);//r+=(2* s--) -1;
+            else
+              r1.h=r,r1.l=0;//r1.h=0,r1.l=r;
+            s>>= shift / 2;
+            s+=r1.h!=0||r1.l!=0;
+          }else {
+            s-=Ts(r)<0;
+            s>>= shift / 2;
+            if (Style==std::round_to_nearest) {//there doesn't seem to be a way to determine rounding without recomputing r after denormalizing.
+              a=(a>>shift)-s;
+              auto c=wideMul(s,s);
+              s+=a.h>c.h||a.l>c.l;
+            }
+          }
+        }
+        return raw(s);
       }
     }
   };
@@ -467,21 +502,6 @@ export
     std::tuple<Bone,fx> remQuo(fx divisor)const {
       auto [q,r]=sRemQuo(repr,divisor.repr);
       return {q,raw(r)};
-    }
-
-    constexpr
-    fx pow(std::conditional_t<(sizeof (Bone)>sizeof(int16_t)),uint16_t,std::make_unsigned_t<Bone>> e)const {
-      if (Radix==NL<Bone>::digits) {
-#ifdef checkArgs
-        if (e==0)
-          throw std::overflow_error("x^0==1 outside of range.");
-#elif __has_builtin(__builtin_assume)
-        __builtin_assume(e>0);
-#endif
-        return intPow(*this,e,false);
-      }else {
-        return intPow(*this,e,true);
-      }
     }
 
   };

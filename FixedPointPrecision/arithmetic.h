@@ -154,15 +154,48 @@ struct aint_dt {
   constexpr
   auto merge
 #if defined(__GNUG__)||defined(__clang__)
-  [[gnu::artificial]]
+  [[gnu::artificial,gnu::hot]]
 #endif
   () const
     noexcept requires requires { typename rankOf<Ta>::two; } {
     constexpr uint8_t width = NL<Tu>::digits;
     return typename rankOf<Ta>::two(typename rankOf<Ta>::two(h) << width | l);
   }
-
   constexpr
+  aint_dt &operator -=(const Tu b) //this function assumes Tu,Ta are the only things we know.
+    noexcept(std::is_unsigned_v<Ta>) {
+    Tu co;
+#ifdef __clang__0
+    if constexpr (std::is_same_v<Tu, unsigned char>)
+      l = __builtin_subcb(l, b, 0, &co);
+    else if constexpr (std::is_same_v<Tu, unsigned short>)
+      l = __builtin_subcs(l, b, 0, &co);
+    else if constexpr (std::is_same_v<Tu, unsigned>)
+      l = __builtin_subc(l, b, 0, &co);
+    else if constexpr (std::is_same_v<Tu, unsigned long>)
+      l = __builtin_subcl(l, b, 0, &co);
+    else if constexpr (std::is_same_v<Tu, unsigned long long>)
+      l = __builtin_subcll(l, b, 0, &co);
+    else {
+#elif defined(__GNUG__0)
+    if constexpr(std::is_same_v<Tu,unsigned int>)
+      l=__builtin_subc(l,b,0,&co);
+    else if constexpr(std::is_same_v<Tu,unsigned long int>)
+      l=__builtin_subcl(l,b,0,&co);
+    else if constexpr(std::is_same_v<Tu,unsigned long long int>)
+      l=__builtin_subcll(l,b,0,&co);
+    else{
+#else
+    {
+#endif
+      Tu d = l - b;
+      co = (~l & b | ~(l ^ b) & d) >> NL<Tu>::digits - 1;
+      l = d;
+    }
+    h -= co;
+    return *this;
+  }
+  /*constexpr
   aint_dt &operator +=(const Tu b) //this function assumes Tu,Ta are the only things we know.
     noexcept(std::is_unsigned_v<Ta>) {
     Tu co;
@@ -199,8 +232,12 @@ struct aint_dt {
   auto operator +(const Tu b) const
     noexcept(noexcept(aint_dt() += b)) {
     return aint_dt(*this) += b;
+  }*/
+  constexpr
+  aint_dt operator-(const Tu b)const
+  noexcept(noexcept(aint_dt()-=b)) {
+    return aint_dt(*this)-=b;
   }
-
   constexpr
   aint_dt &operator >>=(uint8_t by) {
     if (constexpr uint8_t ud = NL<Tu>::digits; by < ud) {
@@ -518,7 +555,7 @@ template<std::regular Tb,std::unsigned_integral Te> requires requires(Tb b)
   Tb{1};
 }
 constexpr
-Tb intPow(const Tb base,const Te exp,bool support0){
+Tb APowU(const Tb &base,const Te exp,bool support0){
   Tb r=support0?Tb{1}:base;
   for (int8_t i=NL<Te>::digits-1-std::countl_zero(exp)-!support0;i>-1;--i){
     r*=r;
@@ -526,4 +563,39 @@ Tb intPow(const Tb base,const Te exp,bool support0){
       r*=base;
   }
   return r;
+}
+
+template<std::unsigned_integral Tu>
+constexpr
+Tu uRoot2(const Tu base,const std::float_round_style S)
+noexcept {
+#ifdef checkArgs
+  if (base == 0)
+    throw std::domain_error("doesn't support 0 as base");
+#endif
+#if __has_builtin(__builtin_assume)
+  __builtin_assume(base>0);
+#endif
+  Tu guess=Tu{1}<<divRnd<uint8_t,uint8_t>(NL<Tu>::digits-std::countl_zero(base),2,std::round_toward_infinity),a;
+  for (a=base/guess;a<guess;a=base/guess)
+    guess=(guess+a)/2;
+  switch (S) {
+  case std::round_toward_infinity: {
+    Tu b=guess*guess;
+#if __has_builtin(__builtin_assume)
+    __builtin_assume((base%guess!=0||a>guess)==base>b);
+#endif
+    guess+=base>b;
+  }
+    break;
+  case std::round_to_nearest: {
+    Tu b=guess*(guess+1);
+#if __has_builtin(__builtin_assume)
+    __builtin_assume((a> guess + 1||(a==guess+1&&base%guess!=0))==base>b);
+#endif
+    guess+= base>b;
+  }
+  default:;
+  }
+  return guess;
 }
