@@ -6,6 +6,7 @@
 #include<bit>
 #include<cstdlib>
 #include<algorithm>
+#include<cmath>
 #include<version>
 #ifdef checkArgs
 #include<stdexcept>
@@ -25,6 +26,10 @@
 #if defined(CPP23)||defined(__GLIBCXX__)
 #define FP_MANIP_CE
 #define INT_ABS_CE
+#define ROUND_CE
+#endif
+#ifdef __GLIBCXX__
+#define SQRT_CE
 #endif
 
 template <std::integral T>
@@ -572,11 +577,57 @@ noexcept {
 #ifdef checkArgs
   if (base == 0)
     throw std::domain_error("doesn't support 0 as base");
-#endif
-#if __has_builtin(__builtin_assume)
+#elif __has_builtin(__builtin_assume)
   __builtin_assume(base>0);
 #endif
-  Tu guess=Tu{1}<<divRnd<uint8_t,uint8_t>(NL<Tu>::digits-std::countl_zero(base),2,std::round_toward_infinity),a;
+  constexpr uint8_t D=NL<Tu>::digits;
+#if defined(SQRT_CE)&&defined(ROUND_CE)
+  uint16_t need;
+  switch (S) {
+  case std::round_indeterminate:
+    need=D;
+    break;
+  case std::round_to_nearest:
+    need=D+3;//need b/2+3 fraction bits for the root. the integer part will take at most b/2 bits.
+    break;
+  default:
+    need=D+1;
+  }
+  if (need<=NL<float>::digits) {
+    float a=std::sqrtf(base);
+    switch (S) {
+  case std::round_to_nearest:
+      return std::lroundf(a);
+    case std::round_toward_infinity:
+      return std::ceilf(a);
+    default:
+      return a;
+    }
+  }
+  if (need<=NL<double>::digits) {
+    double a=std::sqrt(base);
+    switch (S) {
+    case std::round_to_nearest:
+      return std::llround(a);
+    case std::round_toward_infinity:
+      return std::ceil(a);
+    default:
+      return a;
+    }
+  }
+  if (need<=NL<long double>::digits&&D/2<=NL<long long>::digits) {
+    long double a=std::sqrtl(base);
+    switch (S) {
+    case std::round_to_nearest:
+      return std::llroundl(a);
+    case std::round_toward_infinity:
+      return std::ceill(a);
+    default:
+      return a;
+    }
+  }
+#endif
+  Tu guess=Tu{1}<<divRnd<uint8_t,uint8_t>(D-std::countl_zero(base),2,std::round_toward_infinity),a;
   for (a=base/guess;a<guess;a=base/guess)
     guess=(guess+a)/2;
   switch (S) {

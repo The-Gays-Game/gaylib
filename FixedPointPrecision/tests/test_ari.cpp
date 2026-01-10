@@ -240,7 +240,7 @@ import helpers;
           for (uint8_t j=0;j<std::size(styleMacroMap);++j) {
             std::fesetround(styleMacroMap[j]);
             for (Tt i=1;i<=NL<TestType>::max();++i) {
-              //CAPTURE(i,styleEnumMap[j],j);
+              CAPTURE(i,styleEnumMap[j],j);
               TestType t=std::lrintf(std::sqrt(static_cast<float>(i)));
               TestType y=uRoot2(i,styleEnumMap[j]);
               REQUIRE(t==y);
