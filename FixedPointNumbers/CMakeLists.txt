@@ -12,24 +12,26 @@ add_compile_definitions(checkArgs)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	set(flags -fsanitize=undefined,shift,signed-integer-overflow -Wno-bitwise-op-parentheses -Wno-shift-op-parentheses -ftemplate-backtrace-limit=0)
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	set(flags -Wno-parentheses -fnon-call-exceptions -fipa-strict-aliasing -ftrapv -fconcepts-diagnostics-depth=2)
+	set(flags -Wno-parentheses -fnon-call-exceptions -fipa-strict-aliasing -ftrapv -fconcepts-diagnostics-depth=2 -Wno-implicit-fallthrough)
 else()
 	set(flags "")
 endif()
 add_subdirectory(tests)
-add_library(fixed STATIC)
-target_sources(fixed
+add_library(fpnDemo STATIC)
+target_sources(fpnDemo
 		#PUBLIC
-    	PUBLIC FILE_SET CXX_MODULES FILES fixed.cxx
+    	PUBLIC FILE_SET CXX_MODULES FILES core.ixx types.ixx arithmetic.cxx
 		)
-target_compile_definitions(fixed PRIVATE t_fixed_cxx)
 
 
 target_compile_options(
-		fixed PUBLIC
+		fpnDemo PUBLIC
 		-Wall -Wextra -ffp-contract=on -frounding-math -g
 		${flags}
 )
+target_compile_definitions(
+		fpnDemo PRIVATE #dbgNo128
+)
 add_executable(demo main.cpp)
-target_link_libraries(demo PRIVATE fixed)
+target_link_libraries(demo PRIVATE fpnDemo)
 
