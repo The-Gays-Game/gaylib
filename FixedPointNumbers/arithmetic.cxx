@@ -7,6 +7,7 @@ module;
 #include <limits>
 #include <tuple>
 #include<cassert>
+#include<string>
 #include "defs.h"
 export module fpn:ari;
 //namespace fpn::ari {
@@ -18,7 +19,7 @@ constexpr T condNeg
     (const T v, const bool doNeg) noexcept {
   return doNeg ? -v : v;// return (v^-T{a})+a;
 }
-
+dbgHelperExport{
 template <std::integral>
 struct rankOf {
 };
@@ -87,6 +88,8 @@ struct rankOf<__int128> {
 
 template <class T>
 using NL = std::numeric_limits<T>;
+}
+
 /*template <std::integral T> using wide=std::conditional_t<std::unsigned_integral<T>,
 #ifdef __SIZEOF_INT128__
   unsigned __int128,__int128
@@ -95,6 +98,12 @@ uint64_t,int64_t
 #endif
 >;
 }*/
+template<std::integral Ta>
+constexpr
+Ta addC(std::make_unsigned_t<Ta> a,uint8_t &co)
+noexcept(std::is_unsigned_v<Ta>) {
+
+}
 template <std::integral Ta>
 struct aint_dt {
   using Tu = std::make_unsigned_t<Ta>;
@@ -323,7 +332,7 @@ aint_dt<T> wideLS(const T a, const uint8_t /*assume by>0*/ by) {
 
 template <std::unsigned_integral T>
 constexpr
-std::tuple<T, T> uNarrow211Div(const aint_dt<T> &dividend, const T /*assume normalized*/ divisor) {
+std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*assume normalized*/ divisor) {
   assOrAss(std::countl_zero(divisor)==0);
   assOrAss(dividend.h<divisor);
   using Th = rankOf<T>::half;
@@ -356,35 +365,120 @@ std::tuple<T, T> uNarrow211Div(const aint_dt<T> &dividend, const T /*assume norm
 
   return {q.merge(), r};
 }
-
-template <std::unsigned_integral Tdivisor, class Tdividend>
-  requires std::same_as<Tdividend, Tdivisor> || std::same_as<Tdividend, aint_dt<Tdivisor>>
+#define asmDiv(op,h,l) asm (op" %[divisor]":"=a" (q), "=d" (r): [divisor] "rm" (divisor),"a" (l),"d" (h):"cc")
+template <std::unsigned_integral Tu>
 constexpr
-Tdivisor divRnd(const Tdividend &dividend, const Tdivisor divisor, const std::float_round_style s) {
-  Tdivisor q, r;
-  if constexpr (std::is_same_v<Tdividend, Tdivisor>)
-    q = dividend / divisor, r = dividend % divisor;
-  else {
-    auto [a, b] = uNarrow211Div(dividend, divisor);
-    q = a, r = b;
+Tu lsDivRnd(const Tu dividend, Tu divisor,const uint8_t by,const std::float_round_style style) {
+  Tu q,r;
+  if (by==0) {
+    q=dividend/divisor,r=dividend%divisor;
+    if (style==std::round_toward_infinity)
+      return q+(r!=0);
   }
-  switch (s) {
-  case std::round_toward_infinity:
-    return q + (r != 0);
-  case std::round_to_nearest: {
-    // tie to even
-    Tdivisor special = q & (divisor & 1 ^ 1);
-    return q + (r > divisor / 2 - special);
+  else if constexpr(!requires{typename rankOf<Tu>::two;}||sizeof(Tu)>
+   #if ARCH_x86==64||__riscv_xlen==128
+  8
+  #else
+  4
+  #endif
+    ) {
+    uint8_t shift = std::countl_zero(divisor);
+    divisor<<=shift;
+    aint_dt<Tu> c=wideLS(dividend,shift+by);
+    if (style==std::round_toward_infinity)
+      c+=divisor-1;
+    auto[a,b]=nDivNormRem(c,divisor);
+    q=a,r=b;//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+  }else {
+    using Tt=rankOf<Tu>::two;
+    Tt a=Tt(dividend)<<by;
+    if (style==std::round_toward_infinity)
+      a+=divisor-1;
+#ifdef ARCH_x86
+    if constexpr(sizeof(Tu)==1){
+      asm ("divb %[divisor]":
+     "+a" (a) :
+      [divisor] "qm" (divisor):
+      "cc"
+  );
+    q=a,r=a>>8;
   }
-  default:
-    return q;
+    else if constexpr (const aint_dt<Tu> b(a);sizeof(Tu)==2)
+      asmDiv("divw",b.h,b.l);
+    else if constexpr(sizeof(Tu)==4)
+      asmDiv("divl",b.h,b.l);
+    else
+      asmDiv("divq",b.h,b.l);
+#else
+    q=a/divisor,r=a%divisor;
+#endif
   }
+  if (style==std::round_to_nearest) {
+    Tu special = q & (divisor & 1 ^ 1);
+    q+= r > divisor / 2 - special;
+  }
+  return q;
 }
 
 template <std::signed_integral Ts>
 CMATH_CE23
-    Ts divRnd(const Ts dividend, const Ts divisor, const std::float_round_style s) {
-  Ts q = dividend / divisor, r = dividend % divisor;
+Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t by, const std::float_round_style s) {
+  Ts q,r;
+  if (by==0) {
+    q=dividend/divisor,r=dividend%divisor;
+  }else if constexpr(!requires{typename rankOf<Ts>::two;}||sizeof(Ts)>
+ #if ARCH_x86==64||__riscv_xlen==128
+8
+#else
+4
+#endif
+  ) {
+    using Tu = aint_dt<Ts>::Tu;
+    Tu absDivisor = condNeg(Tu(divisor), divisor < 0);
+    uint8_t shift = std::countl_zero(absDivisor);
+    absDivisor <<= shift;
+    aint_dt<Tu> absDividend = wideLS(condNeg(Tu(dividend), dividend < 0), by + shift);
+
+    auto [absQ, absR] = nDivNormRem(absDividend, absDivisor);
+
+    bool qNeg = (dividend ^ divisor) < 0;
+    switch (s) {
+    case std::round_toward_infinity:
+      absQ += absR != 0 && !qNeg;
+      break;
+    case std::round_toward_neg_infinity:
+      absQ += absR != 0 && qNeg; // a^b==0 implies r==0
+      break;
+    case std::round_to_nearest: {
+      Tu special = absQ & (divisor & 1 ^ 1);
+      absQ += absR > absDivisor / 2 - special;
+      break;
+    }
+    default:;
+    }
+    return condNeg(absQ, qNeg);
+  }else {
+  #ifdef ARCH_x86
+    if constexpr(sizeof(Ts)==1) {
+      int16_t a=dividend<<by;
+      asm ("idivb %[divisor]":
+     "+a" (a) :
+      [divisor] "qm" (divisor):
+      "cc"
+);
+      q=a,r=a>>8;
+    }
+    else if constexpr (const aint_dt<Ts> a=wideLS(dividend,by);sizeof(Ts)==2)
+        asmDiv("idivw",a.h,a.l);
+      else if constexpr(sizeof(Ts)==4)
+        asmDiv("idivl",a.h,a.l);
+      else
+        asmDiv("idivq",a.h,a.l);
+  #else
+      Tt a=Tt(dividend)<<by;
+      q=a/divisor,r=a%divisor;
+  #endif
+  }
   bool qNeg = (dividend ^ divisor) < 0;
   switch (s) {
   case std::round_toward_infinity:
@@ -393,7 +487,6 @@ CMATH_CE23
     return q - (r != 0 && qNeg);
   case std::round_to_nearest: {
     Ts special = q & (divisor & 1 ^ 1); // round up tie when odd quotient even divisor. round down tie when even quotient and divisor
-
     if constexpr (requires { std::abs(r); }) {
       return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
     } else {
@@ -408,48 +501,7 @@ CMATH_CE23
   }
 }
 
-template <std::signed_integral Ts>
-constexpr
-Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t scale, const std::float_round_style s) {
-  using Tu = typename aint_dt<Ts>::Tu;
-  Tu absDivisor = condNeg(Tu(divisor), divisor < 0);
-  uint8_t shift = std::countl_zero(absDivisor);
-  absDivisor <<= shift;
-  aint_dt<Tu> absDividend = wideLS(condNeg(Tu(dividend), dividend < 0), scale + shift);
-
-  auto [absQ, absR] = uNarrow211Div(absDividend, absDivisor);
-
-  bool qNeg = (dividend ^ divisor) < 0;
-  switch (s) {
-  case std::round_toward_infinity:
-    absQ += absR != 0 && !qNeg;
-    break;
-  case std::round_toward_neg_infinity:
-    absQ += absR != 0 && qNeg; // a^b==0 implies r==0
-    break;
-  case std::round_to_nearest: {
-    Tu special = absQ & (divisor & 1 ^ 1);
-    absQ += absR > absDivisor / 2 - special;
-    break;
-  }
-  default:;
-  }
-  return condNeg(absQ, qNeg);
-}
-
-template <std::unsigned_integral T>
-static constexpr
-std::tuple<aint_dt<T>, T> u212Div(const aint_dt<T> &dividend, const T /*should be normalized for uNarrow211Div*/ divisor) {
-  aint_dt<T> q;
-  q.h = dividend.h / divisor;
-  T r0 = dividend.h % divisor;
-
-  auto [a, r1] = uNarrow211Div(aint_dt<T>(r0, dividend.l), divisor);
-  q.l = a;
-  return {q, r1};
-}
-
-template <std::regular Tb, std::unsigned_integral Te>
+/*template <std::regular Tb, std::unsigned_integral Te>
   requires requires(Tb b) {
     b *= b;
     Tb{1};
@@ -464,13 +516,45 @@ Tb APowU(const Tb &base, const Te exp, bool support0) {
   }
   return r;
 }
-
+template<std::unsigned_integral Tu>
+struct boundedMul {
+  Tu v;
+  constexpr
+  boundedMul& operator *=(const boundedMul&o)
+  noexcept {
+    if (!(bool(*this)&&bool(o)))
+      v*=o.v;
+    return *this;
+  }
+  constexpr
+  operator bool()const
+  noexcept {
+    return v>=Tu{1}<<NL<Tu>::digits/2;
+  }
+};
+template<std::unsigned_integral Tu>
+constexpr
+Tu uRootN(const Tu base, const uint8_t degree, const std::float_round_style S) {
+  assOrAss(base>0);
+  if (degree<=NL<Tu>::digits) {
+    Tu guess=Tu{1} << divRnd<uint8_t, uint8_t>(NL<Tu>::digits - std::countl_zero(base), degree, std::round_toward_infinity);
+  for (Tu a=base/APowU(base,degree-1);a<guess;a=base/APowU(base,degree-1)) {
+    a=((degree-1)*guess+a)/degree;
+  }
+  }
+}*/
 dbgHelperExport template <std::unsigned_integral Tu>
 constexpr
 Tu uRoot2(const Tu base, const std::float_round_style S)
 noexcept {
-  assOrAss(base>0);
-  Tu guess = Tu{1} << divRnd<uint8_t, uint8_t>(NL<Tu>::digits - std::countl_zero(base), 2, std::round_toward_infinity), a;
+/*
+ * Suppose sqrt(a)=b computes square root of a float point; `a` and `b` both have `c` bit prec. However, sqrt has an unknown
+ * rounding mode, but we know |b-true answer|<=1 ulp. Then, to have `b` be correctly rounded with `c` prec, we need some extra
+ * prec. For round_inf and round_neg_inf, we need 1 bit more. For round_nearest, we need 3 bits more. This can be proven.
+ */
+  if (base<1)
+    return 0;
+  Tu guess = Tu{1} << (NL<Tu>::digits - std::countl_zero(base)+1)/2, a;
   for (a = base / guess; a < guess; a = base / guess)
     guess = (guess + a) / 2;
   switch (S) {
@@ -492,10 +576,6 @@ noexcept {
 template <std::signed_integral Bone>
 CMATH_CE23
     std::tuple<Bone, Bone> remQuoS(const Bone dividend, const Bone divisor) {
-#ifdef checkArgs
-  if (divisor==0)
-    throw std::domain_error("zero divisor.");
-#endif
   Bone q = dividend / divisor, r = dividend % divisor;
   Bone special = q & (divisor & 1 ^ 1);
   Bone absR, absHalfDivisor;
@@ -516,10 +596,6 @@ CMATH_CE23
 template <std::unsigned_integral Bone>
 constexpr
     std::tuple<Bone, std::make_signed_t<Bone>,bool> remQuoS(const Bone dividend, const Bone divisor) {
-#ifdef checkArgs
-  if (divisor==0)
-    throw std::domain_error("zero divisor.");
-#endif
   Bone q = dividend / divisor, r = dividend % divisor;
   Bone special = q & (divisor & 1 ^ 1);
   bool of;

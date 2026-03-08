@@ -21,7 +21,7 @@ template <std::floating_point F> using Tbits=std::conditional_t<sizeof(F) == 4, 
 template <std::floating_point F,std::integral B>
 struct canFastCvt {// we try to convert directly on all x86 because compiler gives a bunch of instructions(on top of cvtss2si...) and branches.
   static constexpr bool value=//arm and risc-v both have hardware support for unsigned or fixed point conversion.
-#if defined(__x86_64__) || defined(_M_X64)||defined(i386) || defined(__i386__) || defined(__i386) || defined(_M_IX86)
+#ifdef ARCH_x86
     ((NL<B>::digits>NL<F>::digits&&sizeof(F)>sizeof(float))||(sizeof(B)>sizeof(uintptr_t)&&sizeof(F)>sizeof(uintptr_t)))
   && NL<F>::is_iec559 && (std::endian::native==std::endian::big||std::endian::native==std::endian::little)
 #else
@@ -117,13 +117,7 @@ CMATH_CE23
     if (divisor==0)
       throw std::domain_error("zero divisor.");
 #endif
-    if (radix==0)
-      return divRnd(dividend,divisor,style);
-    if constexpr (requires { typename rankOf<Bone>::two; }) {
-      using Tt=rankOf<Bone>::two;
-      return divRnd<Tt>(Tt(dividend)<<radix,divisor,style);
-    }else
-      return lsDivRnd(dividend,divisor,radix,style);
+    return lsDivRnd(dividend,divisor,radix,style);
   }
 template<std::unsigned_integral Bone>
 constexpr
@@ -133,16 +127,7 @@ Bone div(Bone dividend,Bone divisor,uint8_t radix,std::float_round_style style) 
     if (divisor==0)
       throw std::domain_error("zero divisor.");
 #endif
-    if (radix==0)
-      return divRnd(dividend,divisor,style);
-    if constexpr (requires { typename rankOf<Bone>::two; }) {
-      using Tt=rankOf<Bone>::two;
-      return divRnd<Tt,Tt>(Tt(dividend)<<radix,divisor,style);
-    }else {
-          uint8_t shift = std::countl_zero(divisor);
-    divisor<<= shift;
-    return divRnd(wideLS(dividend, shift + radix), divisor, style);//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
-    }
+    return lsDivRnd(dividend,divisor,radix,style);
   }
 
 
@@ -165,67 +150,12 @@ Bone div(Bone dividend,Bone divisor,uint8_t radix,std::float_round_style style) 
   template <std::unsigned_integral Bone>
   constexpr
   Bone sqrt(Bone base, uint8_t radix, std::float_round_style style) noexcept {
-    if (radix == 0) {
-#if HAS_CONTENTS(CMATH_CE26)
-      uint8_t need;
-      switch (style) {
-      case std::round_indeterminate:
-        need = NL<Bone>::digits;
-        break;
-      case std::round_to_nearest:
-        need = NL<Bone>::digits + 3; // need b/2+3 fraction bits for the root. the integer part will take at most b/2 bits.
-        break;
-      default:
-        need = NL<Bone>::digits + 1;
-      }
-#if !defined(__riscv) || defined(__riscv_f)
-      if (need <= NL<float>::digits) {
-        float a = std::sqrtf(base);
-        switch (style) {
-        case std::round_to_nearest:
-          return std::lroundf(a);
-        case std::round_toward_infinity:
-          return std::ceilf(a);
-        default:
-          return a;
-        }
-      }
-#endif
-#if !defined(__riscv) || defined(__riscv_d)
-      if (need <= NL<double>::digits) {
-        double a = std::sqrt(base);
-        switch (style) {
-        case std::round_to_nearest:
-          return std::llround(a);
-        case std::round_toward_infinity:
-          return std::ceil(a);
-        default:
-          return a;
-        }
-      }
-#endif
-#ifndef __riscv
-      if (need <= NL<long double>::digits && NL<Bone>::digits / 2 <= NL<long long>::digits) {
-        long double a = std::sqrtl(base);
-        switch (style) {
-        case std::round_to_nearest:
-          return std::llroundl(a);
-        case std::round_toward_infinity:
-          return std::ceill(a);
-        default:
-          return a;
-        }
-      }
-#endif
-#endif
-      if (base == 0)
-        return base;
+    if (radix == 0)
       return uRoot2(base, style);
-    }
-    assert(radix <= NL<std::make_unsigned_t<Bone>>::digits);
+    assert(radix <= NL<Bone>::digits);
     if constexpr (requires { typename rankOf<Bone>::two; }) {
       using Tt = rankOf<Bone>::two;
-      return sqrt<Tt>(Tt(base) << radix, 0, style);
+      return uRoot2<Tt>(Tt(base) << radix, style);
     } else {
       if (base == 0)
         return 0;
@@ -234,7 +164,7 @@ Bone div(Bone dividend,Bone divisor,uint8_t radix,std::float_round_style style) 
       shift -= (shift ^ radix) & 1;
       auto a = wideLS(base, shift);
       assert(a.l >> NL<Bone>::digits - 1 <= 1);
-      const Bone s0 = sqrt(a.h, 0, std::round_toward_zero);
+      const Bone s0 = Th(uRoot2(a.h, std::round_toward_zero));
       shift -= radix;
       const Bone r0 = a.h - s0 * s0;
       Bone b = r0 << NL<Th>::digits - 1 | a.l >> NL<Th>::digits + 1;
@@ -265,4 +195,28 @@ Bone div(Bone dividend,Bone divisor,uint8_t radix,std::float_round_style style) 
       return s1;
     }
   }
+/*template<std::unsigned_integral Bone>
+constexpr
+Bone rSqrt(Bone a,uint8_t radix,std::float_round_style style)
+noexcept {
+    assOrAss(radix < NL<Bone>::digits);
+    assert(a>0);
+    if (style==std::round_indeterminate) {
+      uint8_t b=NL<Bone>::digits-std::countl_zero(a);
+      b+=std::max(b-radix,0)&1;
+      if (b<NL<Bone>::digits) {
+        radix+=b;
+        Bone c=sqrt(div(Bone{1},a,radix,std::round_to_nearest),radix,std::round_to_nearest);
+        return c>>b/2;
+      }
+      if constexpr(requires{typename rankOf<Bone>::two;}) {
+        using Tt=rankOf<Bone>::two;;
+        radix+=b;
+        Tt c=sqrt(div<Tt>(1,a,radix,std::round_to_nearest),radix,std::round_to_nearest);
+        return c>>b/2;
+      }
+    }
+    uint16_t b=radix*3;
+    if (b<=)
+  }*/
 }

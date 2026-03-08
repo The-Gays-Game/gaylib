@@ -44,10 +44,18 @@ noexcept {
       return b;
     }
     constexpr
-auto remQuo(ufx divisor,bool *overflow=nullptr)const
+auto remQuo
+#if defined(__GNUG__) && !defined(__clang__)
+  [[gnu::access(write_only,2+1)]]
+#endif
+    (ufx divisor,bool *overflow=nullptr)const
 requires(Radix<NL<Bone>::digits)//at Radix==digits there's a loss of precision when converting to fx
 {
       using Ts=fx<std::make_signed_t<Bone>,Radix,Style>;
+#ifdef checkArgs
+      if (divisor.repr==0)
+        throw std::domain_error("zero divisor.");
+#endif
       auto [q,r,of]=remQuoS(repr,divisor.repr);
       if (overflow!=nullptr)
         *overflow=of;

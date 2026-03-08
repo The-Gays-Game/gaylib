@@ -42,15 +42,6 @@ TEST_CASE("fast path") {
       }
     }
   }
-  SECTION("sqrt") {
-    uint8_t si = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
-    std::fesetround(styleMacroMap[si]);
-    uint8_t base=GENERATE(range(0,NL<uint8_t >::max()+1));
-    //uint8_t radix = GENERATE(range(0, NL<TestType>::digits + 1));
-    uint8_t  y=sqrt(base,0,styleEnumMap[si]);
-    uint8_t  t=std::lrintf(std::sqrtf(base));
-    REQUIRE(y==t);
-  }
 }
 TEMPLATE_TEST_CASE("bone 8", "", int8_t, uint8_t) {
   using Tu = std::make_unsigned_t<TestType>;
@@ -88,7 +79,7 @@ TEMPLATE_TEST_CASE("bone 8", "", int8_t, uint8_t) {
       TestType divisor = TestType(i);
       float a = float(dividend) / divisor; // must make sure the float type here have more than 2*8 digits. because br uses lrint, which introduces another rounding.
       if (a >= small && a <= big) {
-        //CAPTURE(dividend, divisor, radix);
+        CAPTURE(short(dividend), short(divisor), short(radix),short(si));
         TestType y0 = div(dividend, divisor, radix, styleEnumMap[si]);
         TestType y1 = div<Tl>(dividend, divisor, radix, styleEnumMap[si]);
         TestType t = br<TestType>(a, radix);

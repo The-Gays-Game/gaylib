@@ -71,9 +71,5 @@ int main() {
   // i128 c=(i128(base)<<radix)-i128(a)*a,d=(i128(base)<<radix)-i128(b)*b;
   // std::cout<<c<<' '<<d<<std::endl;
   // std::cout<<(i128(base)<<radix)<<' '<<i128(a)*a<<' '<<i128(b)*b<<std::endl;
-  float a=1;
-  a=std::numeric_limits<float>::max();
-  int e;
-  a=std::frexpf(a,&e);
-  std::cout<<a<<' '<<e;
+  std::cout<<int(div<uint8_t>(1,254,1,std::round_toward_zero));
 }
