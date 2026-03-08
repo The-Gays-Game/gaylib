@@ -1,93 +1,92 @@
 module;
+#include "defs.h"
 #include <algorithm>
 #include <bit>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <tuple>
-#include<cassert>
-#include<string>
-#include "defs.h"
 export module fpn:ari;
-//namespace fpn::ari {
+// namespace fpn::ari {
 template <std::integral T>
-constexpr T condNeg
 #if defined(__GNUG__) || defined(__clang__)
     [[gnu::hot]]
 #endif
-    (const T v, const bool doNeg) noexcept {
-  return doNeg ? -v : v;// return (v^-T{a})+a;
+constexpr T condNeg (const T v, const bool doNeg)
+noexcept {
+  return doNeg ? -v : v; // return (v^-T{a})+a;
 }
-dbgHelperExport{
-template <std::integral>
-struct rankOf {
-};
+dbgHelperExport {
+  template <std::integral>
+  struct rankOf {
+  };
 
-template <>
-struct rankOf<uint8_t> {
-  using two = uint16_t;
-};
+  template <>
+  struct rankOf<uint8_t> {
+    using two = uint16_t;
+  };
 
-template <>
-struct rankOf<int8_t> {
-  using two = int16_t;
-};
+  template <>
+  struct rankOf<int8_t> {
+    using two = int16_t;
+  };
 
-template <>
-struct rankOf<uint16_t> {
-  using half = uint8_t;
-  using two = uint32_t;
-};
+  template <>
+  struct rankOf<uint16_t> {
+    using half = uint8_t;
+    using two = uint32_t;
+  };
 
-template <>
-struct rankOf<int16_t> {
-  using half = int8_t;
-  using two = int32_t;
-};
+  template <>
+  struct rankOf<int16_t> {
+    using half = int8_t;
+    using two = int32_t;
+  };
 
-template <>
-struct rankOf<uint32_t> {
-  using half = uint16_t;
-  using two = uint64_t;
-};
+  template <>
+  struct rankOf<uint32_t> {
+    using half = uint16_t;
+    using two = uint64_t;
+  };
 
-template <>
-struct rankOf<int32_t> {
-  using half = int16_t;
-  using two = int64_t;
-};
+  template <>
+  struct rankOf<int32_t> {
+    using half = int16_t;
+    using two = int64_t;
+  };
 
-template <>
-struct rankOf<uint64_t> {
-  using half = uint32_t;
-#if defined(__SIZEOF_INT128__)&&!defined(dbgNo128)
-  using two = unsigned __int128;
+  template <>
+  struct rankOf<uint64_t> {
+    using half = uint32_t;
+#if defined(__SIZEOF_INT128__) && !defined(dbgNo128)
+    using two = unsigned __int128;
 #endif
-};
+  };
 
-template <>
-struct rankOf<int64_t> {
-  using half = int32_t;
-#if defined(__SIZEOF_INT128__)&&!defined(dbgNo128)
-  using two = __int128;
+  template <>
+  struct rankOf<int64_t> {
+    using half = int32_t;
+#if defined(__SIZEOF_INT128__) && !defined(dbgNo128)
+    using two = __int128;
 #endif
-};
+  };
 
 #if defined(__SIZEOF_INT128__)
-template <>
-struct rankOf<unsigned __int128> {
-  using half = uint64_t;
-};
+  template <>
+  struct rankOf<unsigned __int128> {
+    using half = uint64_t;
+  };
 
-template <>
-struct rankOf<__int128> {
-  using half = int64_t;
-};
+  template <>
+  struct rankOf<__int128> {
+    using half = int64_t;
+  };
 #endif
 
-template <class T>
-using NL = std::numeric_limits<T>;
+  template <class T>
+  using NL = std::numeric_limits<T>;
 }
 
 /*template <std::integral T> using wide=std::conditional_t<std::unsigned_integral<T>,
@@ -98,11 +97,8 @@ uint64_t,int64_t
 #endif
 >;
 }*/
-template<std::integral Ta>
-constexpr
-Ta addC(std::make_unsigned_t<Ta> a,uint8_t &co)
-noexcept(std::is_unsigned_v<Ta>) {
-
+template <std::integral Ta>
+constexpr Ta addC(std::make_unsigned_t<Ta> a, uint8_t &co) noexcept(std::is_unsigned_v<Ta>) {
 }
 template <std::integral Ta>
 struct aint_dt {
@@ -112,19 +108,19 @@ struct aint_dt {
 
   aint_dt() = default;
 
-  constexpr
-  aint_dt(const Ta h, const Tu l) noexcept : h(h), l(l) {
+  constexpr aint_dt(const Ta h, const Tu l)
+  noexcept
+  : h(h), l(l) {
   }
 
   template <std::integral T>
-    requires(std::is_signed_v<T> == std::is_signed_v<Ta> && (NL<Ta>::digits + NL<Tu>::digits >= NL<T>::digits))
+  requires(std::is_signed_v<T> == std::is_signed_v<Ta> && (NL<Ta>::digits + NL<Tu>::digits >= NL<T>::digits))
 #if defined(__GNUG__) || defined(__clang__)
-      [[gnu::artificial, gnu::hot]]
+  [[using gnu:artificial, hot]]
 #endif
-  constexpr
-  explicit aint_dt(T v)
+  constexpr explicit aint_dt(T v)
   noexcept
-    : l(v) {
+      : l(v) {
     if (std::is_signed_v<T>)
       h = v >> std::min(NL<T>::digits, NL<Tu>::digits);
     else if (NL<Tu>::digits < NL<T>::digits)
@@ -133,19 +129,18 @@ struct aint_dt {
       h = 0;
   }
 
-  constexpr auto merge
+
 #if defined(__GNUG__) || defined(__clang__)
       [[gnu::artificial, gnu::hot]]
 #endif
-      () const
+    constexpr auto merge() const
       noexcept
-    requires requires { typename rankOf<Ta>::two; }
+      requires requires { typename rankOf<Ta>::two; }
   {
     constexpr uint8_t width = NL<Tu>::digits;
     return typename rankOf<Ta>::two(typename rankOf<Ta>::two(h) << width | l);
   }
-  constexpr
-  aint_dt &operator-=(const Tu b) // this function assumes Tu,Ta are the only things we know.
+  constexpr aint_dt &operator-=(const Tu b) // this function assumes Tu,Ta are the only things we know.
       noexcept(std::is_unsigned_v<Ta>) {
     Tu co;
 #ifdef __clang__
@@ -181,9 +176,8 @@ struct aint_dt {
     h -= co;
     return *this;
   }
-  constexpr
-  aint_dt &operator +=(const Tu b) //this function assumes Tu,Ta are the only things we know.
-    noexcept(std::is_unsigned_v<Ta>) {
+  constexpr aint_dt &operator+=(const Tu b) // this function assumes Tu,Ta are the only things we know.
+      noexcept(std::is_unsigned_v<Ta>) {
     Tu co;
 #ifdef __clang__
     if constexpr (std::is_same_v<Tu, unsigned char>)
@@ -198,15 +192,15 @@ struct aint_dt {
       l = __builtin_addcll(l, b, 0, &co);
     else
 #elif defined(__GNUG__)
-        if constexpr(std::is_same_v<Tu,unsigned int>)
-            l=__builtin_addc(l,b,0,&co);
-        else if constexpr(std::is_same_v<Tu,unsigned long int>)
-            l=__builtin_addcl(l,b,0,&co);
-        else if constexpr(std::is_same_v<Tu,unsigned long long int>)
-            l=__builtin_addcll(l,b,0,&co);
-        else
+    if constexpr (std::is_same_v<Tu, unsigned int>)
+      l = __builtin_addc(l, b, 0, &co);
+    else if constexpr (std::is_same_v<Tu, unsigned long int>)
+      l = __builtin_addcl(l, b, 0, &co);
+    else if constexpr (std::is_same_v<Tu, unsigned long long int>)
+      l = __builtin_addcll(l, b, 0, &co);
+    else
 #endif
-        {
+    {
       Tu s = l + b;
       co = (l & b | (l | b) & ~s) >> NL<Tu>::digits - 1;
       l = s;
@@ -215,27 +209,24 @@ struct aint_dt {
     return *this;
   }
 
-  constexpr
-  auto operator +(const Tu b) const
-    noexcept(noexcept(aint_dt() += b)) {
+  constexpr auto operator+(const Tu b) const
+      noexcept(noexcept(aint_dt() += b)) {
     return aint_dt(*this) += b;
   }
-  constexpr
-  aint_dt operator-(const Tu b) const
+  constexpr aint_dt operator-(const Tu b) const
       noexcept(noexcept(aint_dt() -= b)) {
     return aint_dt(*this) -= b;
   }
-  constexpr
-  aint_dt &operator>>=(uint8_t by) {
+  constexpr aint_dt &operator>>=(uint8_t by) {
     if (constexpr uint8_t ud = NL<Tu>::digits; by < ud) {
       l >>= by;
       l |= h << (ud - by - 1) << 1;
       h >>= by;
     } else {
       by -= ud;
-      assert(by<ud);
+      assert(by < ud);
       l = h >> by;
-      if constexpr (std::is_signed_v<Ta>)//silence a warning about potential shift undefined behavior from clang.
+      if constexpr (std::is_signed_v<Ta>) // silence a warning about potential shift undefined behavior from clang.
         h >>= NL<Ta>::digits;
       else
         h = 0;
@@ -243,14 +234,12 @@ struct aint_dt {
     return *this;
   }
 
-  constexpr
-  auto operator>>(const uint8_t by) const {
+  constexpr auto operator>>(const uint8_t by) const {
     return aint_dt(*this) >>= by;
   }
 
-  constexpr
-  Ta narrowRnd(const uint8_t to, const std::float_round_style s) const {
-    assert(to!=0);
+  constexpr Ta narrowRnd(const uint8_t to, const std::float_round_style s) const {
+    assert(to != 0);
     const Ta eucQ = (*this >> to).l;
     const Tu mod = l & NL<Tu>::max() >> NL<Tu>::digits - to;
     switch (s) {
@@ -271,12 +260,11 @@ struct aint_dt {
 };
 
 template <std::integral T>
-constexpr
-T rnd(const T v, const uint8_t to, const std::float_round_style s) {
+constexpr T rnd(const T v, const uint8_t to, const std::float_round_style s) {
   if (__builtin_expect_with_probability(to == 0, true, 1.f / NL<T>::digits))
     return v;
   using Tu = std::make_unsigned_t<T>;
-  assert(to<=NL<Tu>::digits);
+  assert(to <= NL<Tu>::digits);
   const T eucQ = v >> to - 1 >> 1;
   const Tu mod = v & NL<Tu>::max() >> NL<Tu>::digits - to;
   switch (s) {
@@ -296,8 +284,7 @@ T rnd(const T v, const uint8_t to, const std::float_round_style s) {
 }
 
 template <std::integral T>
-constexpr
-aint_dt<T> wideMul(const T a, const T b) noexcept(std::is_unsigned_v<T>) {
+constexpr aint_dt<T> wideMul(const T a, const T b) noexcept(std::is_unsigned_v<T>) {
   using Tu = aint_dt<T>::Tu;
   using Th = rankOf<Tu>::half;
   using Tm = std::common_type_t<Tu, unsigned int>;
@@ -317,11 +304,10 @@ aint_dt<T> wideMul(const T a, const T b) noexcept(std::is_unsigned_v<T>) {
 }
 
 template <std::integral T>
-constexpr
-aint_dt<T> wideLS(const T a, const uint8_t /*assume by>0*/ by) {
+constexpr aint_dt<T> wideLS(const T a, const uint8_t /*assume by>0*/ by) {
   using Tu = aint_dt<T>::Tu;
-  assOrAss(by>0);
-  if (__builtin_expect_with_probability(by >= NL<Tu>::digits, true, NL<Tu>::digits/(NL<Tu>::digits*2.f-1))){
+  assOrAss(by > 0);
+  if (__builtin_expect_with_probability(by >= NL<Tu>::digits, true, NL<Tu>::digits / (NL<Tu>::digits * 2.f - 1))) {
     T h = a << by - NL<Tu>::digits;
     return {h, 0};
   }
@@ -331,10 +317,9 @@ aint_dt<T> wideLS(const T a, const uint8_t /*assume by>0*/ by) {
 }
 
 template <std::unsigned_integral T>
-constexpr
-std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*assume normalized*/ divisor) {
-  assOrAss(std::countl_zero(divisor)==0);
-  assOrAss(dividend.h<divisor);
+constexpr std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*assume normalized*/ divisor) {
+  assOrAss(std::countl_zero(divisor) == 0);
+  assOrAss(dividend.h < divisor);
   using Th = rankOf<T>::half;
   constexpr uint8_t halfWidth = NL<Th>::digits;
   constexpr double b1Prob = 0.326549, b2Prob = 0.00977582; // measured using all valid combination from T=uint8_t.
@@ -347,7 +332,7 @@ std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*assume normal
 
   if (__builtin_expect_with_probability(c1 > c2, true, b1Prob)) {
     --qhat;
-    qhat -=__builtin_expect_with_probability(c1 - c2 > divisor, true, b2Prob);
+    qhat -= __builtin_expect_with_probability(c1 - c2 > divisor, true, b2Prob);
   }
   q.h = qhat;
 
@@ -357,7 +342,7 @@ std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*assume normal
   c1 = qhat * divisorSplit.l, c2 = rhat << halfWidth | dividendLSplit.l;
   if (__builtin_expect_with_probability(c1 > c2, true, b1Prob)) {
     --qhat;
-    qhat -=__builtin_expect_with_probability(c1 - c2 > divisor, true, b2Prob);
+    qhat -= __builtin_expect_with_probability(c1 - c2 > divisor, true, b2Prob);
   }
   q.l = qhat;
 
@@ -365,72 +350,65 @@ std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*assume normal
 
   return {q.merge(), r};
 }
-#define asmDiv(op,h,l) asm (op" %[divisor]":"=a" (q), "=d" (r): [divisor] "rm" (divisor),"a" (l),"d" (h):"cc")
+#define asmDiv(op, h, l) asm(op " %[divisor]" : "=a"(q), "=d"(r) : [divisor] "rm"(divisor), "a"(l), "d"(h) : "cc")
 template <std::unsigned_integral Tu>
-constexpr
-Tu lsDivRnd(const Tu dividend, Tu divisor,const uint8_t by,const std::float_round_style style) {
-  Tu q,r;
-  if (by==0) {
-    q=dividend/divisor,r=dividend%divisor;
-    if (style==std::round_toward_infinity)
-      return q+(r!=0);
-  }
-  else if constexpr(!requires{typename rankOf<Tu>::two;}||sizeof(Tu)>
-   #if ARCH_x86==64||__riscv_xlen==128
-  8
-  #else
-  4
-  #endif
-    ) {
-    uint8_t shift = std::countl_zero(divisor);
-    divisor<<=shift;
-    aint_dt<Tu> c=wideLS(dividend,shift+by);
-    if (style==std::round_toward_infinity)
-      c+=divisor-1;
-    auto[a,b]=nDivNormRem(c,divisor);
-    q=a,r=b;//rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
-  }else {
-    using Tt=rankOf<Tu>::two;
-    Tt a=Tt(dividend)<<by;
-    if (style==std::round_toward_infinity)
-      a+=divisor-1;
-#ifdef ARCH_x86
-    if constexpr(sizeof(Tu)==1){
-      asm ("divb %[divisor]":
-     "+a" (a) :
-      [divisor] "qm" (divisor):
-      "cc"
-  );
-    q=a,r=a>>8;
-  }
-    else if constexpr (const aint_dt<Tu> b(a);sizeof(Tu)==2)
-      asmDiv("divw",b.h,b.l);
-    else if constexpr(sizeof(Tu)==4)
-      asmDiv("divl",b.h,b.l);
-    else
-      asmDiv("divq",b.h,b.l);
+constexpr Tu lsDivRnd(const Tu dividend, Tu divisor, const uint8_t by, const std::float_round_style style) {
+  Tu q, r;
+  if (by == 0) {
+    q = dividend / divisor, r = dividend % divisor;
+    if (style == std::round_toward_infinity)
+      return q + (r != 0);
+  } else if constexpr (!requires { typename rankOf<Tu>::two; } || sizeof(Tu) >
+#if ARCH_x86 == 64 || __riscv_xlen == 128
+                                                                      8
 #else
-    q=a/divisor,r=a%divisor;
+                                                                      4
+#endif
+  ) {
+    uint8_t shift = std::countl_zero(divisor);
+    divisor <<= shift;
+    aint_dt<Tu> c = wideLS(dividend, shift + by);
+    if (style == std::round_toward_infinity)
+      c += divisor - 1;
+    auto [a, b] = nDivNormRem(c, divisor);
+    q = a, r = b; // rounding behavior depends on q, r, divisor. q doesn't change. r scales with divisor, so when odd q then inequality doesn't change. when even divisor, scaling by even number is still even.
+  } else {
+    using Tt = rankOf<Tu>::two;
+    Tt a = Tt(dividend) << by;
+    if (style == std::round_toward_infinity)
+      a += divisor - 1;
+#ifdef ARCH_x86
+    if constexpr (sizeof(Tu) == 1) {
+      asm("divb %[divisor]" : "+a"(a) :
+          [divisor] "qm"(divisor) : "cc");
+      q = a, r = a >> 8;
+    } else if constexpr (const aint_dt<Tu> b(a); sizeof(Tu) == 2)
+      asmDiv("divw", b.h, b.l);
+    else if constexpr (sizeof(Tu) == 4)
+      asmDiv("divl", b.h, b.l);
+    else
+      asmDiv("divq", b.h, b.l);
+#else
+    q = a / divisor, r = a % divisor;
 #endif
   }
-  if (style==std::round_to_nearest) {
+  if (style == std::round_to_nearest) {
     Tu special = q & (divisor & 1 ^ 1);
-    q+= r > divisor / 2 - special;
+    q += r > divisor / 2 - special;
   }
   return q;
 }
 
 template <std::signed_integral Ts>
-CMATH_CE23
-Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t by, const std::float_round_style s) {
-  Ts q,r;
-  if (by==0) {
-    q=dividend/divisor,r=dividend%divisor;
-  }else if constexpr(!requires{typename rankOf<Ts>::two;}||sizeof(Ts)>
- #if ARCH_x86==64||__riscv_xlen==128
-8
+CMATH_CE23 Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t by, const std::float_round_style s) {
+  Ts q, r;
+  if (by == 0) {
+    q = dividend / divisor, r = dividend % divisor;
+  } else if constexpr (sizeof(Ts) >
+#if ARCH_x86 == 64 || __riscv_xlen == 128
+                       8
 #else
-4
+                       4
 #endif
   ) {
     using Tu = aint_dt<Ts>::Tu;
@@ -457,27 +435,23 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t by, const std::fl
     default:;
     }
     return condNeg(absQ, qNeg);
-  }else {
-  #ifdef ARCH_x86
-    if constexpr(sizeof(Ts)==1) {
-      int16_t a=dividend<<by;
-      asm ("idivb %[divisor]":
-     "+a" (a) :
-      [divisor] "qm" (divisor):
-      "cc"
-);
-      q=a,r=a>>8;
-    }
-    else if constexpr (const aint_dt<Ts> a=wideLS(dividend,by);sizeof(Ts)==2)
-        asmDiv("idivw",a.h,a.l);
-      else if constexpr(sizeof(Ts)==4)
-        asmDiv("idivl",a.h,a.l);
-      else
-        asmDiv("idivq",a.h,a.l);
-  #else
-      Tt a=Tt(dividend)<<by;
-      q=a/divisor,r=a%divisor;
-  #endif
+  } else {
+#ifdef ARCH_x86
+    if constexpr (sizeof(Ts) == 1) {
+      int16_t a = dividend << by;
+      asm("idivb %[divisor]" : "+a"(a) :
+          [divisor] "qm"(divisor) : "cc");
+      q = a, r = a >> 8;
+    } else if constexpr (const aint_dt<Ts> a = wideLS(dividend, by); sizeof(Ts) == 2)
+      asmDiv("idivw", a.h, a.l);
+    else if constexpr (sizeof(Ts) == 4)
+      asmDiv("idivl", a.h, a.l);
+    else
+      asmDiv("idivq", a.h, a.l);
+#else
+    Tt a = Tt(dividend) << by;
+    q = a / divisor, r = a % divisor;
+#endif
   }
   bool qNeg = (dividend ^ divisor) < 0;
   switch (s) {
@@ -490,7 +464,7 @@ Ts lsDivRnd(const Ts dividend, const Ts divisor, const uint8_t by, const std::fl
     if constexpr (requires { std::abs(r); }) {
       return q + condNeg<Ts>(std::abs(r) > std::abs(divisor / 2) - special, qNeg);
     } else {
-      __builtin_assume((dividend^r)>=0);// sign of remainder only depends on dividend.
+      __builtin_assume((dividend ^ r) >= 0); // sign of remainder only depends on dividend.
       Ts a = condNeg(r, dividend < 0), b = condNeg<Ts>(divisor / 2, divisor < 0);
       return q + condNeg<Ts>(a > b - special, qNeg);
     }
@@ -543,18 +517,18 @@ Tu uRootN(const Tu base, const uint8_t degree, const std::float_round_style S) {
   }
   }
 }*/
-dbgHelperExport template <std::unsigned_integral Tu>
-constexpr
-Tu uRoot2(const Tu base, const std::float_round_style S)
+dbgHelperExport
+template <std::unsigned_integral Tu>
+constexpr Tu uRoot2(const Tu base, const std::float_round_style S)
 noexcept {
-/*
- * Suppose sqrt(a)=b computes square root of a float point; `a` and `b` both have `c` bit prec. However, sqrt has an unknown
- * rounding mode, but we know |b-true answer|<=1 ulp. Then, to have `b` be correctly rounded with `c` prec, we need some extra
- * prec. For round_inf and round_neg_inf, we need 1 bit more. For round_nearest, we need 3 bits more. This can be proven.
- */
-  if (base<1)
+  /*
+   * Suppose sqrt(a)=b computes square root of a float point; `a` and `b` both have `c` bit prec. However, sqrt has an unknown
+   * rounding mode, but we know |b-true answer|<=1 ulp. Then, to have `b` be correctly rounded with `c` prec, we need some extra
+   * prec. For round_inf and round_neg_inf, we need 1 bit more. For round_nearest, we need 3 bits more. This can be proven.
+   */
+  if (base < 1)
     return 0;
-  Tu guess = Tu{1} << (NL<Tu>::digits - std::countl_zero(base)+1)/2, a;
+  Tu guess = Tu{1} << (NL<Tu>::digits - std::countl_zero(base) + 1) / 2, a;
   for (a = base / guess; a < guess; a = base / guess)
     guess = (guess + a) / 2;
   switch (S) {
@@ -574,8 +548,7 @@ noexcept {
 }
 
 template <std::signed_integral Bone>
-CMATH_CE23
-    std::tuple<Bone, Bone> remQuoS(const Bone dividend, const Bone divisor) {
+CMATH_CE23 std::tuple<Bone, Bone>remQuoS(const Bone dividend, const Bone divisor) {
   Bone q = dividend / divisor, r = dividend % divisor;
   Bone special = q & (divisor & 1 ^ 1);
   Bone absR, absHalfDivisor;
@@ -594,17 +567,16 @@ CMATH_CE23
 }
 
 template <std::unsigned_integral Bone>
-constexpr
-    std::tuple<Bone, std::make_signed_t<Bone>,bool> remQuoS(const Bone dividend, const Bone divisor) {
+constexpr std::tuple<Bone, std::make_signed_t<Bone>, bool> remQuoS(const Bone dividend, const Bone divisor) {
   Bone q = dividend / divisor, r = dividend % divisor;
   Bone special = q & (divisor & 1 ^ 1);
   bool of;
-  if (r > divisor/2 - special) {
+  if (r > divisor / 2 - special) {
     ++q;
-    r-=divisor;//this won't underflow.
-    of=false;
-  }else
-    of=r>NL<std::make_signed_t<Bone>>::max();
-  return {q, r,of};
+    r -= divisor; // this won't underflow.
+    of = false;
+  } else
+    of = r > NL<std::make_signed_t<Bone>>::max();
+  return {q, r, of};
 }
 //}

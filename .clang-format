@@ -1,1 +1,16 @@
 ColumnLimit: 0
+NamespaceIndentation: None
+IndentExportBlock: false
+IndentPPDirectives: BeforeHash
+RequiresClausePosition: SingleLine #WithPreceding
+BreakTemplateDeclarations: Yes
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: BinPack
+BreakAfterAttributes: Always
+BreakBeforeBraces: Custom
+BreakAfterReturnType: Automatic
+BraceWrapping:
+  AfterFunction: false
+UseTab: ForIndentation
+IndentWidth: 3
+TabWidth: 3
