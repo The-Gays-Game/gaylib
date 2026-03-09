@@ -63,13 +63,16 @@ operator<<( std::ostream& dest, unsigned __int128 value )
 int main() {
   using u128=unsigned __int128;
   using i128=unsigned __int128;
-  // uint64_t base=std::numeric_limits<uint64_t>::max();
-  // uint8_t radix=63;
-  // uint64_t a=sqrt(base,radix,std::round_toward_zero);
-  // uint64_t b=uRoot2<u128>(u128(static_cast<u128>(base) <<radix),std::round_toward_zero);
-  // std::cout<<a<<' '<<b<<std::endl;
-  // i128 c=(i128(base)<<radix)-i128(a)*a,d=(i128(base)<<radix)-i128(b)*b;
-  // std::cout<<c<<' '<<d<<std::endl;
-  // std::cout<<(i128(base)<<radix)<<' '<<i128(a)*a<<' '<<i128(b)*b<<std::endl;
-  std::cout<<int(div<uint8_t>(1,254,1,std::round_toward_zero));
+	// uint16_t a = uRoot2(uint16_t(65024), std::round_toward_zero);
+	// std::cout<<a;
+	std::fesetround(FE_TOWARDZERO);
+	for (unsigned int i = 1; i <= NL<uint16_t>::max(); ++i) {
+		uint16_t y = uRoot2(uint16_t(i), std::round_toward_zero);
+		uint16_t t = std::lrint(std::sqrt(i));
+		if (y!=t) {
+			std::cout<<i<<' '<<y<<' '<<t<<std::endl;
+			break;
+		}
+
+	}
 }

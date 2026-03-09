@@ -157,9 +157,8 @@ noexcept {
     shift -= (shift ^ radix) & 1;
     auto a = wideLS(base, shift);
     assert(a.l >> NL<Bone>::digits - 1 <= 1);
-    const Bone s0 = Th(uRoot2(a.h, std::round_toward_zero));
-    shift -= radix;
-    const Bone r0 = a.h - s0 * s0;
+  	shift -= radix;
+  	const auto [s0,r0]=sqrtRem(a.h);
     Bone b = r0 << NL<Th>::digits - 1 | a.l >> NL<Th>::digits + 1;
     Bone q = b / s0, u = b % s0;
     assOrAss(q <= Bone(NL<Th>::max()) + 1);
