@@ -60,19 +60,25 @@ operator<<( std::ostream& dest, unsigned __int128 value )
   }
   return dest;
 }
+long double sqrtBranchProb(uint8_t D)//D is half total width.
+noexcept {
+	using ld=long double;
+
+	const ld e0=std::ldexpl(1,2*D+1);
+	const double e1=std::ldexp(1,D);
+	const ld a=std::floorl(std::sqrtl(e0-e1));
+	ld b=a*(a+1)*(2*a+1)/6;
+	ld c=(e1*2-a)*(e0-e1);
+	ld d=std::ldexpl(1,3*D+2)-e1;
+	const ld rawProb=(b+c)/d;
+
+	const ld seriesMean=(1-std::ldexpl(0.5,-D))*2/(D+1);//more right shifts == less likely to overestimate. shift count is half total width.
+	return rawProb*seriesMean;
+}
 int main() {
   using u128=unsigned __int128;
   using i128=unsigned __int128;
 	// uint16_t a = uRoot2(uint16_t(65024), std::round_toward_zero);
 	// std::cout<<a;
-	std::fesetround(FE_TOWARDZERO);
-	for (unsigned int i = 1; i <= NL<uint16_t>::max(); ++i) {
-		uint16_t y = uRoot2(uint16_t(i), std::round_toward_zero);
-		uint16_t t = std::lrint(std::sqrt(i));
-		if (y!=t) {
-			std::cout<<i<<' '<<y<<' '<<t<<std::endl;
-			break;
-		}
-
-	}
+	std::cout<<sqrtBranchProb(64);
 }

@@ -99,9 +99,6 @@ uint64_t,int64_t
 >;
 }*/
 template <std::integral Ta>
-constexpr Ta addC(std::make_unsigned_t<Ta> a, uint8_t &co) noexcept(std::is_unsigned_v<Ta>) {
-}
-template <std::integral Ta>
 struct aint_dt {
   using Tu = std::make_unsigned_t<Ta>;
   Ta h;
@@ -177,6 +174,12 @@ struct aint_dt {
     h -= co;
     return *this;
   }
+	constexpr aint_dt&operator-=(const aint_dt&b)
+	noexcept(std::is_unsigned_v<Ta>) {
+	  *this-=b.l;
+  		h-=b.h;
+  		return *this;
+  }
   constexpr aint_dt &operator+=(const Tu b) // this function assumes Tu,Ta are the only things we know.
       noexcept(std::is_unsigned_v<Ta>) {
     Tu co;
@@ -217,6 +220,10 @@ struct aint_dt {
   constexpr aint_dt operator-(const Tu b) const
       noexcept(noexcept(aint_dt() -= b)) {
     return aint_dt(*this) -= b;
+  }
+	constexpr aint_dt operator-(const aint_dt&b) const
+	 noexcept(noexcept(aint_dt() -= b)) {
+  	return aint_dt(*this) -= b;
   }
   constexpr aint_dt &operator>>=(uint8_t by) {
     if (constexpr uint8_t ud = NL<Tu>::digits; by < ud) {
@@ -365,7 +372,7 @@ template<std::unsigned_integral Tu>
 constexpr auto nDivRem(Tu dividend, typename rankOf<Tu>::half divisor) {
 	using Th=rankOf<Tu>::half;
 	Th q,r;
-#ifndef ARCH_x86
+#ifdef ARCH_x86
 	if constexpr (sizeof(Tu) == 2) {
 		asm("divb %[divisor]" :
 			"+a"(dividend) :

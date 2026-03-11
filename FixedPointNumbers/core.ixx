@@ -29,7 +29,7 @@ struct canFastCvt {             // we try to convert directly on all x86 because
 #endif
       ;
 };
-
+constexpr float karatsubaUnderestimateProb []={0.117326,0.0621874,0.0320361,0.0162645,0.00819528};
 export namespace fpn::core {
 template <std::floating_point F, std::integral B>
 CMATH_CE23 F toF(B v, uint8_t radix, std::float_round_style S)
@@ -141,74 +141,104 @@ constexpr Bone mul(Bone a, Bone b, uint8_t radix, std::float_round_style style)
     return wideMul(a, b).narrowRnd(radix, style);
 }
 template <std::unsigned_integral Bone>
-constexpr Bone sqrt(Bone base, uint8_t radix, std::float_round_style style)
+constexpr Bone sqrt(Bone base, uint8_t exp, std::float_round_style style)
 noexcept {
-  if (radix == 0)
+  if (exp == 0)
     return uRoot2(base, style);
-  assert(radix <= NL<Bone>::digits);
+  assert(exp <= NL<Bone>::digits);
   if constexpr (requires { typename rankOf<Bone>::two; }) {
     using Tt = rankOf<Bone>::two;
-    return uRoot2<Tt>(Tt(base) << radix, style);
+    return uRoot2<Tt>(Tt(base) << exp, style);
   } else {
     if (base == 0)
       return 0;
     using Th = rankOf<Bone>::half;
     uint8_t shift = std::countl_zero(base) + NL<Bone>::digits;
-    shift -= (shift ^ radix) & 1;
+    shift -= (shift ^ exp) & 1;
     auto a = wideLS(base, shift);
     assert(a.l >> NL<Bone>::digits - 1 <= 1);
-  	shift -= radix;
+  	shift -= exp;
   	const auto [s0,r0]=sqrtRem(a.h);
-    Bone b = r0 << NL<Th>::digits - 1 | a.l >> NL<Th>::digits + 1;
-    Bone q = b / s0, u = b % s0;
-    assOrAss(q <= Bone(NL<Th>::max()) + 1);
-    if (__builtin_expect_with_probability(q > NL<Th>::max(), true, 1. / (Bone{1} << NL<Th>::digits))) {
-      --q;
-      u += s0;
-    }
-    Bone s1 = aint_dt<Th>(s0, q).merge();
-    aint_dt<Bone> r1;
-    if (style != std::round_indeterminate) {
-      using Ts = std::make_signed_t<Bone>;
-      r1 = wideLS(u, 1 + NL<Th>::digits) - q * q;
-      if (__builtin_expect_with_probability(Ts(r1.h) < 0, true, 0.2469)) {
-        r1 += s1--;
-        r1 += s1;
-      }
-    }
-    s1 >>= shift / 2;
-    if (style == std::round_toward_infinity)
-      s1 += r1.h != 0 || r1.l != 0;
-    else if (style == std::round_to_nearest) { // there doesn't seem to be a way to determine rounding without recomputing r after denormalizing.
-      r1 = wideLS(base, radix) - s1;
-      a = wideMul(s1, s1);
-      s1 += r1.h > a.h || r1.l > a.l;
-    }
-    return s1;
+  	const Bone q=(r0 << NL<Th>::digits - 1 | a.l >> NL<Th>::digits + 1)/s0;
+  	Bone s1=aint_dt<Th>(s0,std::min<Bone>(q,NL<Th>::max())).merge()>>shift/2;
+  	if (style==std::round_indeterminate)
+  		return s1;
+  	aint_dt<Bone> r1=wideLS(base,exp)-wideMul(s1,s1);
+	if (__builtin_expect_with_probability(std::make_signed_t<Bone>(r1.h)<0,true,karatsubaUnderestimateProb[std::bit_width(sizeof(Bone))-1])) {
+		r1-=s1--;
+		r1-=s1;
+	}
+  	if (style==std::round_toward_infinity)
+  		return s1+(r1.h!=0||r1.l!=0);
+  	if (style==std::round_to_nearest)
+  		return s1+(r1.h!=0|r1.l>s1);
+  	return s1;
   }
 }
-/*template<std::unsigned_integral Bone>
-constexpr
-Bone rSqrt(Bone a,uint8_t radix,std::float_round_style style)
+template<std::unsigned_integral Bone>
+constexpr Bone rSqrt(Bone a,uint8_t radix,std::float_round_style style)
 noexcept {
-    assOrAss(radix < NL<Bone>::digits);
+	constexpr uint8_t D=NL<Bone>::digits;
+    assOrAss(radix < D);
     assert(a>0);
-    if (style==std::round_indeterminate) {
-      uint8_t b=NL<Bone>::digits-std::countl_zero(a);
-      b+=std::max(b-radix,0)&1;
-      if (b<NL<Bone>::digits) {
-        radix+=b;
-        Bone c=sqrt(div(Bone{1},a,radix,std::round_to_nearest),radix,std::round_to_nearest);
-        return c>>b/2;
-      }
-      if constexpr(requires{typename rankOf<Bone>::two;}) {
-        using Tt=rankOf<Bone>::two;;
-        radix+=b;
-        Tt c=sqrt(div<Tt>(1,a,radix,std::round_to_nearest),radix,std::round_to_nearest);
-        return c>>b/2;
-      }
+    uint16_t e3=radix*3;
+	const Bone  d =div(a,4,0,std::round_toward_infinity);
+    if (slowDiv<Bone>::v) {
+    	uint8_t shift=std::countl_zero(a);
+		a<<=shift;
+		aint_dt<Bone> c=wideLS(Bone{1},e3-D+shift),q;
+		std::tie(q.h,c.h)=nDivNormRem(c,a);
+		c.l=0;
+    	Bone r0;
+		std::tie(q.l,r0)=nDivNormRem(c,a);
+    	r0>>=shift;
+
+    	shift=std::countl_zero(q.h);
+    	shift&=~1;
+    	auto [s0,r2]=sqrtRem(q.h<<shift|q.l>>D-shift);
+    	c=wideLS(r2,D/2);
+    	c.l|=q.l<<shift>>D/2;//higher half of q.l
+    	auto[e,_]=nDivNormRem(c,Bone(s0)*2);
+    	aint_dt<std::make_signed_t<Bone>> r1;
+    	using Th=rankOf<Bone>::half;
+    	Bone s;
+    	if (e>NL<Th>::max()) {
+    		s=aint_dt<Th>(s0,NL<Th>::max()).merge()>>shift/2;
+    		r1=q-wideMul(s,s);
+    	}else {
+    		s=aint_dt<Th>(s0,e).merge()>>shift/2;
+    		r1=q-wideMul(s,s);
+    		if (r1.h<0) {
+    			r1+=s--;
+    			r1+=s;
+    		}
+    	}
+    	switch (style) {
+    	case std::round_to_nearest:
+    		return s+(r1.h!=0||s+(r0<d)<=r1.l);
+    	case std::round_toward_infinity:
+    		return s+(r0!=0||r1.h!=0||r1.l!=0);
+    	default:
+    		return s;
+    	}
+
     }
-    uint16_t b=radix*3;
-    if (b<=)
-  }*/
+	using Tt=rankOf<Bone>::two;
+   Tt dividend=Tt{1}<<e3-D;
+	auto [q1,r0]=nDivRem(dividend,a);
+	dividend=r0<<D;
+	Tt q=Tt(q1)<<D;
+	std::tie(q1,r0)=nDivRem(dividend,a);
+   q|=q1;
+
+   auto [s,r1]=sqrtRem(q);
+	switch (style) {
+	case std::round_to_nearest:
+		return s+(s+(r0<d)<=r1);
+	case std::round_toward_infinity:
+		return s+(r0!=0||r1!=0);
+	default:
+		return s;
+	}
+  }
 } // namespace fpn::core
