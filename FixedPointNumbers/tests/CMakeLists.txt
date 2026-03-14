@@ -30,6 +30,7 @@ target_compile_options(helpers PUBLIC
 		${dbgOpts}
 		${flags}
 )
+target_link_libraries(helpers PRIVATE testDbg)
 
 add_executable(fpnRTTests core_rt.cpp)
 target_link_libraries(fpnRTTests PRIVATE testDbg)

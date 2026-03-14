@@ -80,5 +80,5 @@ int main() {
   using i128=unsigned __int128;
 	// uint16_t a = uRoot2(uint16_t(65024), std::round_toward_zero);
 	// std::cout<<a;
-	std::cout<<sqrtBranchProb(64);
+	std::cout<<sqrt(1u,0,std::round_to_nearest);
 }

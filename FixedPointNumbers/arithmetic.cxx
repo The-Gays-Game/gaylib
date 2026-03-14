@@ -530,6 +530,7 @@ Tu uRootN(const Tu base, const uint8_t degree, const std::float_round_style S) {
   }
   }
 }*/
+dbgHelperExport
 template<uint8_t>
 constexpr std::tuple<uint8_t,uint8_t>sqrtRem(const uint8_t base)
 noexcept {
@@ -552,6 +553,7 @@ noexcept {
 		root>>=4;
 	return {root,base-root*root};
 }
+dbgHelperExport
 template <std::unsigned_integral Tu>
 constexpr auto sqrtRem(const Tu base)
 noexcept {
@@ -579,23 +581,6 @@ noexcept {
 		guess = (guess + a) / 2;
 	#endif
 	return R{guess,base-Tu(guess)*guess};
-}
-dbgHelperExport
-template <std::unsigned_integral Tu>
-constexpr Tu uRoot2(const Tu base, const std::float_round_style S)
-noexcept {
-	Tu root,rem;
-	std::tie(root,rem)=sqrtRem(base);
-  switch (S) {
-  case std::round_toward_infinity: {
-  	root+=rem!=0;
-  } break;
-  case std::round_to_nearest: {
-  	root+=rem>root;
-  }
-  default:;
-  }
-  return root;
 }
 
 template <std::signed_integral Bone>
