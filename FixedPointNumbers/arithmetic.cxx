@@ -368,7 +368,9 @@ constexpr std::tuple<T, T> nDivNormRem(const aint_dt<T> &dividend, const T /*ass
 #define asmDiv(op, h, l) asm(op " %[divisor]" : "=a"(q), "=d"(r) : [divisor] "rm"(divisor), "a"(l), "d"(h) : "cc")
 template<std::unsigned_integral Tu>
 constexpr auto nDivRem(Tu dividend, typename rankOf<Tu>::half divisor) {
+	assert(divisor!=0);
 	using Th=rankOf<Tu>::half;
+	assert(dividend>>NL<Th>::digits<divisor);
 	Th q,r;
 #ifdef ARCH_x86
 	if constexpr (sizeof(Tu) == 2) {

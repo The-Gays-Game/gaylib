@@ -213,15 +213,17 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
 }
 TEST_CASE("recSqrt") {
 	uint8_t si = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
-	uint8_t exp=GENERATE(range(uint8_t{0},uint8_t{32}));
-	constexpr uint64_t M=NL<uint32_t>::max();
-	const uint32_t minX=(u128{1u}<<3*exp)/(uint64_t(M)*M);
-	for (int _=0;_<4096;++_) {
-		const uint32_t base=rg32()%(M-minX+1)+minX;
-		CAPTURE(si,exp,minX,base);
-		uint32_t t=recSqrt(base,exp,styleEnumMap[si]);//this is proven to be correctly rounded.
-		auto y=recSqrt<uint64_t>(base,exp,styleEnumMap[si]);//we just need to test whether the 2 word version is correctly implemented.
-		REQUIRE(t==y);
+	uint8_t exp=GENERATE(range(uint8_t{0},uint8_t{16}));
+	constexpr uint32_t M=NL<uint16_t>::max();//(uint64_t{1u}<<3*exp)/(M*M)
+	const uint32_t minX=std::max<uint32_t>(div<uint64_t>(uint64_t{1}<<3*exp,M*M,0,std::round_toward_infinity),1);
+	CAPTURE(int(si),int(exp),minX);
+	for (uint32_t base=minX;base<=M;++base) {
+		CAPTURE(base);
+		uint16_t t=recSqrt<uint16_t>(base,exp,styleEnumMap[si]);//this is proven to be correctly rounded.
+		auto y0=recSqrt<uint64_t>(uint64_t(base)<<48,exp+48,styleEnumMap[si]);//we just need to test whether the 2 word version is correctly implemented.
+		auto y1=chngRdx(y0,exp+48,exp,styleEnumMap[si]);
+		//CAPTURE(si,int(exp),minX,base,y0);
+		REQUIRE(t==y1);
 	}
 }
 TEST_CASE("sqrt") {

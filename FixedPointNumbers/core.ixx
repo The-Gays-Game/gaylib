@@ -145,7 +145,7 @@ constexpr Bone div(Bone dividend, Bone divisor, uint8_t radix, std::float_round_
 template <std::integral Bone>
 constexpr Bone mul(Bone a, Bone b, uint8_t radix, std::float_round_style style)
 #ifdef NDEBUG
-    noexcept(std::is_unsigned_v<Bone>)
+    noexcept
 #endif
 {
   if (radix == 0)
@@ -195,9 +195,9 @@ constexpr Bone recSqrt(Bone a, uint8_t exp, std::float_round_style style) {
 	constexpr uint8_t D = NL<Bone>::digits;
 	assOrAss(exp < D);
 	assert(a > 0);
-	if (uint16_t b = 2 * exp + 2; b < D && a == Bone{1} << b) // tie to even.
-		return 0;
 	uint16_t e3 = exp * 3;
+	if (style==std::round_to_nearest&&e3+2 < D && a == Bone{1} << (e3+2)) // tie to even.
+		return 0;
 	const Bone d = a / 4 + (a % 4 != 0);
 	if (e3 <= D) {
 		Bone q, r0;
@@ -224,39 +224,39 @@ constexpr Bone recSqrt(Bone a, uint8_t exp, std::float_round_style style) {
 
 		auto [s, r1] = sqrtRem(q);
 		return rndRecSqrt(s, r0, d, r1, style);
-	}
-	uint8_t shift = std::countl_zero(a);
-	a <<= shift;
-	aint_dt<Bone> c = wideLS(Bone{1}, e3 - D + shift), q;
-	std::tie(q.h, c.h) = nDivNormRem(c, a);
-	c.l = 0;
-	Bone r0;
-	std::tie(q.l, r0) = nDivNormRem(c, a);
-	r0 >>= shift;
+	}else {
+		uint8_t shift = std::countl_zero(a);
+		a <<= shift;
+		aint_dt<Bone> c = wideLS(Bone{1}, e3 - D + shift), q;
+		std::tie(q.h, c.h) = nDivNormRem(c, a);
+		c.l = 0;
+		Bone r0;
+		std::tie(q.l, r0) = nDivNormRem(c, a);
+		r0 >>= shift;
 
-	if (q.h == 0) {
-		auto [s, r1] = sqrtRem(q.l);
-		return rndRecSqrt<Bone>(s, r0, d, r1, style);
-	}
-	shift = std::countl_zero(q.h) & ~1;
-	auto [s0, r2] = sqrtRem(q.h << shift | q.l >> D - shift);
-
-	Bone e = (r2 << D / 2 - 1 | q.l >> D / 2 + 1) / s0;
-
-	using Th = rankOf<Bone>::half;
-	aint_dt<Bone> r1;
-	Bone s;
-	if (__builtin_expect_with_probability(e > NL<Th>::max(),true,1./(Bone{1}<<D/2))) {
-		s = aint_dt<Th>(s0, NL<Th>::max()).merge() >> shift / 2;
-		r1 = q - wideMul(s, s);
-	} else {
-		s = aint_dt<Th>(s0, e).merge() >> shift / 2;
-		r1 = q - wideMul(s, s);
-		if (__builtin_expect_with_probability(std::make_signed_t<Bone>(r1.h)<0,true,karatsubaUnderestimateProb[std::bit_width(sizeof(Bone))-1])) {
-			r1 += s--;
-			r1 += s;
+		if (q.h == 0) {
+			auto [s, r1] = sqrtRem(q.l);
+			return rndRecSqrt<Bone>(s, r0, d, r1, style);
 		}
+		shift = std::countl_zero(q.h) & ~1;
+		auto [s0, r2] = sqrtRem(q.h << shift | q.l >> (D - shift-1)>>1);
+
+		Bone e = (r2 << D / 2 - 1 | q.l >> D / 2 + 1) / s0;
+		using Th = rankOf<Bone>::half;
+		aint_dt<Bone> r1;
+		Bone s;
+		if (__builtin_expect_with_probability(e > NL<Th>::max(),true,1./(Bone{1}<<D/2))) {
+			s = aint_dt<Th>(s0, NL<Th>::max()).merge() >> shift / 2;
+			r1 = q - wideMul(s, s);
+		} else {
+			s = aint_dt<Th>(s0, e).merge() >> shift / 2;
+			r1 = q - wideMul(s, s);
+			if (__builtin_expect_with_probability(std::make_signed_t<Bone>(r1.h)<0,true,karatsubaUnderestimateProb[std::bit_width(sizeof(Bone))-1])) {
+				r1 += s--;
+				r1 += s;
+			}
+		}
+		return rndRecSqrt(s, r0, d, r1, style);
 	}
-	return rndRecSqrt(s, r0, d, r1, style);
 }
 } // namespace fpn::core

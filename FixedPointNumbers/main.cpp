@@ -77,21 +77,36 @@ noexcept {
 	const ld seriesMean=(1-std::ldexpl(0.5,-D))*2/(D+1);//more right shifts == less likely to overestimate. shift count is half total width.
 	return rawProb*seriesMean;
 }
+using namespace std;
 int main() {
   using u128=unsigned __int128;
   using i128=unsigned __int128;
-	std::cout<<fromF<uint8_t>(1.,0);
-	std::vector<std::array<int16_t,2>> a;
-	for (int16_t b=-255;b<=255;++b) {
-		for (int16_t c=-255;c<=255;++c) {
-			if (std::abs(b)!=std::abs(c))
-				continue;
-			int32_t d=b*c;
-			if (d>std::numeric_limits<int16_t>::max()||d<std::numeric_limits<int16_t>::min()) {
-				std::array<int16_t,2> e{b,c};
-				a.push_back(e);
-				std::cout<<b<<' '<<c<<std::endl;
-			}
-		}
-	}
+	/*
+	REQUIRE(t==y1)
+with expansion:
+  1 == 0
+with message:
+  si := 1
+  int(exp) := 2
+  minX := 1
+  base := 256
+  y0 := 140737488355328 (0x800000000000)
+	*/
+	cout<<toF<double>(recSqrt<uint16_t>(256,2,round_to_nearest),2,round_to_nearest)<<endl;
+	cout<<toF<double>(uint64_t{140737488355328},50,round_toward_infinity)<<endl;
+	cout<<toF<double>(recSqrt<uint64_t>(uint64_t{256}<<48,50,round_to_nearest),50,round_to_nearest)<<endl;
+	// std::cout<<fromF<uint8_t>(1.,0);
+	// std::vector<std::array<int16_t,2>> a;
+	// for (int16_t b=-255;b<=255;++b) {
+	// 	for (int16_t c=-255;c<=255;++c) {
+	// 		if (std::abs(b)!=std::abs(c))
+	// 			continue;
+	// 		int32_t d=b*c;
+	// 		if (d>std::numeric_limits<int16_t>::max()||d<std::numeric_limits<int16_t>::min()) {
+	// 			std::array<int16_t,2> e{b,c};
+	// 			a.push_back(e);
+	// 			std::cout<<b<<' '<<c<<std::endl;
+	// 		}
+	// 	}
+	// }
 }
