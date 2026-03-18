@@ -15,6 +15,8 @@ import fpn;
 import helpers;
 using namespace fpn::core;
 using namespace fpn;
+using i128=__int128;
+using u128=unsigned __int128;
 TEST_CASE("fast path") {
 	SECTION("toF") {
 		for (const auto _ : std::ranges::views::iota(0, 1 << 18)) {
@@ -208,6 +210,19 @@ TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
 	    }(std::make_integer_sequence<uint8_t, std::size(styleEnumMap)>{});
 	  }
 	}*/
+}
+TEST_CASE("recSqrt") {
+	uint8_t si = GENERATE(range(size_t{0}, std::size(styleEnumMap)));
+	uint8_t exp=GENERATE(range(uint8_t{0},uint8_t{32}));
+	constexpr uint64_t M=NL<uint32_t>::max();
+	const uint32_t minX=(u128{1u}<<3*exp)/(uint64_t(M)*M);
+	for (int _=0;_<4096;++_) {
+		const uint32_t base=rg32()%(M-minX+1)+minX;
+		CAPTURE(si,exp,minX,base);
+		uint32_t t=recSqrt(base,exp,styleEnumMap[si]);//this is proven to be correctly rounded.
+		auto y=recSqrt<uint64_t>(base,exp,styleEnumMap[si]);//we just need to test whether the 2 word version is correctly implemented.
+		REQUIRE(t==y);
+	}
 }
 TEST_CASE("sqrt") {
 	uint8_t si = GENERATE(range(size_t{0}, std::size(styleEnumMap)));

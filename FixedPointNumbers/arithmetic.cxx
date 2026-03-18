@@ -129,7 +129,7 @@ struct aint_dt {
 
 
 #if defined(__GNUG__) || defined(__clang__)
-      [[gnu::artificial, gnu::hot]]
+	[[using gnu:artificial, hot]]
 #endif
     constexpr auto merge() const
       noexcept
@@ -292,23 +292,21 @@ constexpr T rnd(const T v, const uint8_t to, const std::float_round_style s) {
 }
 
 template <std::integral T>
-constexpr aint_dt<T> wideMul(const T a, const T b) noexcept(std::is_unsigned_v<T>) {
-  using Tu = aint_dt<T>::Tu;
-  using Th = rankOf<Tu>::half;
-  using Tm = std::common_type_t<Tu, unsigned int>;
-  constexpr T halfWidth = NL<Th>::digits;
+constexpr aint_dt<T> wideMul(const T a, const T b) noexcept {
+	using Tu = aint_dt<T>::Tu;
+	using Th = rankOf<Tu>::half;
+	constexpr T halfWidth = NL<Th>::digits;
 
-  const T aL = Th(a), aH = a >> halfWidth;
-  const T bL = Th(b), bH = b >> halfWidth;
+	const T aH = a >> halfWidth, bH = b >> halfWidth;
+	const Tu aL = Th(a), bL = Th(b);
 
-  T d = aH * bL + (Tm(aL) * bL >> halfWidth);
-  T c1 = Th(d);
-  T c2 = d >> halfWidth;
-  c1 += aL * bH;
+	Tu c2 = aL * bL;
+	T d = aH * bL + (c2 >> halfWidth);
+	T c1 = Th(d) + aL * bH;
 
-  T eH = aH * bH + c2 + (c1 >> halfWidth);
-  Tu eL = Tm(a) * b; // unfortunately if we have uint16_t*uint16_t can overflow int32
-  return {eH, eL};
+	T eH = aH * bH + (d >> halfWidth) + (c1 >> halfWidth);
+	Tu eL = Tu(c1) << halfWidth | Th(c2);
+	return {eH, eL};
 }
 
 template <std::integral T>
@@ -326,7 +324,7 @@ constexpr aint_dt<T> wideLS(const T a, const uint8_t /*assume by>0*/ by) {
 template <std::integral T>
 struct slowDiv {
 	static constexpr bool v=sizeof(T) >
-#if ARCH_x86 == 64 || __riscv_xlen == 128
+#if (ARCH_x86 == 64 || __riscv_xlen == 128)&&!defined(dbgNo128)
 																							 8
 #else
 																							 4

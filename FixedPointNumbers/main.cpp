@@ -10,6 +10,8 @@
 #include<chrono>
 #include<random>
 #include<version>
+#include<vector>
+#include<array>
 #include "defs.h"
  import fpn;
 using namespace fpn::core;
@@ -78,7 +80,18 @@ noexcept {
 int main() {
   using u128=unsigned __int128;
   using i128=unsigned __int128;
-	// uint16_t a = uRoot2(uint16_t(65024), std::round_toward_zero);
-	// std::cout<<a;
-	std::cout<<sqrt(1u,0,std::round_to_nearest);
+	std::cout<<fromF<uint8_t>(1.,0);
+	std::vector<std::array<int16_t,2>> a;
+	for (int16_t b=-255;b<=255;++b) {
+		for (int16_t c=-255;c<=255;++c) {
+			if (std::abs(b)!=std::abs(c))
+				continue;
+			int32_t d=b*c;
+			if (d>std::numeric_limits<int16_t>::max()||d<std::numeric_limits<int16_t>::min()) {
+				std::array<int16_t,2> e{b,c};
+				a.push_back(e);
+				std::cout<<b<<' '<<c<<std::endl;
+			}
+		}
+	}
 }
