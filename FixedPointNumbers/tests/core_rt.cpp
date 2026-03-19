@@ -32,19 +32,13 @@ TEMPLATE_TEST_CASE("fast path","",int64_t,uint64_t) {
 		}
 	}
 	SECTION("fromF") {
-		for (const auto _ : std::ranges::views::iota(0, 1 << 18)) {
-			for (int8_t radix : std::ranges::views::iota(int8_t{0}, int8_t{64})) {
-				double a = std::bit_cast<double>(static_cast<uint64_t>(rg32() >> 1) << 32 | rg32());
-				// CAPTURE(uint16_t(radix),a);
-				const double fpnMax = toF<double>(NL<uint64_t>::max(), radix, std::round_indeterminate);
-				if (a > fpnMax || a < 0 || std::isnan(a)) {
-					continue;
-				}
-				uint64_t t = std::ldexp(a, radix);
-				uint64_t y = fromF<uint64_t>(a, radix);
-
-				REQUIRE(t == y);
-			}
+		uint8_t exp=GENERATE(range(uint8_t{0},uint8_t(NL<TestType>::digits+1)));
+		for (uint32_t _=0;_<77777;++_) {
+			TestType t=uint64_t(rg32()%(1<<21))<<32|rg32();
+			t<<=rg32()%22;
+			double b=toF<double>(t,exp,std::round_indeterminate);
+			TestType y=fromF<TestType>(b,exp);
+			REQUIRE(t==y);
 		}
 	}
 }

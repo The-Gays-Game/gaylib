@@ -20,14 +20,20 @@ using Tbits = std::conditional_t<sizeof(F) == 4, uint32_t,
 #endif
                                  >;
 template <std::floating_point F, std::integral B>
-struct canFastCvt {             // we try to convert directly on all x86 because compiler gives a bunch of instructions(on top of cvtss2si...) and branches.
-  static constexpr bool value = // arm and risc-v both have hardware support for unsigned or fixed point conversion.
-#ifdef ARCH_x86
-      (NL<B>::digits > NL<F>::digits && (sizeof(F) > sizeof(float) || sizeof(F) >= sizeof(uintptr_t)) && NL<F>::is_iec559 && (std::endian::native == std::endian::big || std::endian::native == std::endian::little))
-#else
+struct canFastCvt {
+  static constexpr bool value = (
+  	#ifdef ARCH_x86// we try to convert directly on all x86 because compiler gives a bunch of instructions(on top of cvtss2si...) and branches.
+      NL<B>::digits > NL<F>::digits && (sizeof(F) > sizeof(float) || sizeof(F) >= sizeof(uintptr_t))
+#else// arm and risc-v both have hardware support for unsigned or fixed point conversion.
       false
 #endif
-	||sizeof(B)>8;//__int128 doesn't have fast hardware instructions.
+	||
+#if __riscv_flen==128
+	false
+#else
+	sizeof(B)>8//__int128 generally doesn't have fast hardware instructions.
+#endif
+	)&&NL<F>::is_iec559 && (std::endian::native == std::endian::big || std::endian::native == std::endian::little);
 };
 template<std::unsigned_integral T0,class T1>requires std::unsigned_integral<T1>||std::same_as<T1,aint_dt<T0>>
 constexpr T0 rndRecSqrt(T0 s, T0 r0,T0 d,const T1 &r1,std::float_round_style style){
@@ -49,7 +55,7 @@ constexpr T0 rndRecSqrt(T0 s, T0 r0,T0 d,const T1 &r1,std::float_round_style sty
 constexpr float karatsubaUnderestimateProb[]={0.117326,0.0621874,0.0320361,0.0162645,0.00819528};
 export namespace fpn::core {
 template <std::floating_point F, std::integral B>
-CMATH_CE23 F toF(B v, uint8_t exp, std::float_round_style S) noexcept(noexcept(std::ldexp(v, int{}))) {
+CMATH_CE23 F toF(B v, uint8_t exp, std::float_round_style style) noexcept(noexcept(std::ldexp(v, int{}))) {
 	if constexpr (NL<B>::digits > NL<F>::digits) {
 		using U = std::make_unsigned_t<B>;
 		const bool neg = v < 0;
@@ -60,8 +66,8 @@ CMATH_CE23 F toF(B v, uint8_t exp, std::float_round_style S) noexcept(noexcept(s
 			uint32_t cvt = a[av << (exp == 127)] | uint32_t(neg) << 31;
 			return std::bit_cast<float>(cvt);
 		}
-		if (int8_t more = sd - NL<F>::digits; S != std::round_indeterminate && __builtin_expect_with_probability(more > int8_t{0}, true, (NL<B>::digits - NL<F>::digits) / static_cast<float>(NL<B>::digits))) { //  we provide rounding because int to float point conversion rounding type is unspecified.
-			av = condNeg<U>(rnd(v, more, S), neg);                                                                                                                                                                // rnd makes sure v only has NL<F>::digits and no trailing 0.
+		if (int8_t more = sd - NL<F>::digits; style != std::round_indeterminate && __builtin_expect_with_probability(more > int8_t{0}, true, (NL<B>::digits - NL<F>::digits) / static_cast<float>(NL<B>::digits))) { //  we provide rounding because int to float point conversion rounding type is unspecified.
+			av = condNeg<U>(rnd(v, more, style), neg);                                                                                                                                                                // rnd makes sure v only has NL<F>::digits and no trailing 0.
 			exp -= more;
 			if (canFastCvt<F, B>::value) { // can't be zero nor subnormal. this allows faster conversion.
 				constexpr uint8_t explicitD = NL<F>::digits - 1;
@@ -76,22 +82,22 @@ CMATH_CE23 F toF(B v, uint8_t exp, std::float_round_style S) noexcept(noexcept(s
 	return std::ldexp(F(v), -exp); // if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
 }
 template <std::integral B, std::floating_point F>
-CMATH_CE23 B fromF(F v, uint8_t radix)
-noexcept(noexcept(std::ldexp(v, radix))) {
+CMATH_CE23 B fromF(F v, uint8_t fxExp)
+noexcept(noexcept(std::ldexp(v, fxExp))) {
   if (canFastCvt<F, B>::value) {
     int exp;
-    v = std::frexp(v, &exp);
-    exp += radix;
-    constexpr int minFrExp(NL<F>::min_exponent - NL<F>::digits + 2);
+    F normV = std::frexp(v, &exp);
+    exp += fxExp;
+    constexpr int minFrExp=NL<F>::min_exponent - NL<F>::digits + 2;
     if (__builtin_expect_with_probability(exp <= 0, true, (NL<B>::digits / 2.f - minFrExp + 1) / (NL<F>::max_exponent - minFrExp + 1)))
       return 0;
 
     using Tb = Tbits<F>;
-    Tb cvt = Tb{1} << NL<Tb>::digits - 1 | std::bit_cast<Tb>(v) << NL<Tb>::digits - NL<F>::digits;
+    Tb cvt = Tb{1} << NL<Tb>::digits - 1 | std::bit_cast<Tb>(normV) << NL<Tb>::digits - NL<F>::digits;
     cvt >>= NL<Tb>::digits - exp;
-    return cvt;
+    return v<0?-B(cvt):cvt;
   }
-  return std::ldexp(v, radix);
+  return std::ldexp(v, fxExp);
 }
 
 template <std::integral Bone>
@@ -197,7 +203,11 @@ constexpr Bone recSqrt(Bone a, uint8_t exp, std::float_round_style style) {
 	uint16_t e3 = exp * 3;
 	if (style==std::round_to_nearest&&e3+2 < D && a == Bone{1} << (e3+2)) // tie to even.
 		return 0;
-	const Bone d = a / 4 + (a % 4 != 0);
+	Bone d;
+	if constexpr(requires{typename rankOf<Bone>::two;})
+		d=(typename rankOf<Bone>::two(a)+3)/4;
+	else
+		d=a/4+(a%4!=0);
 	if (e3 <= D) {
 		Bone q, r0;
 		if constexpr (slowDiv<Bone>::v) {
