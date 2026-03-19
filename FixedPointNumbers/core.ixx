@@ -23,11 +23,11 @@ template <std::floating_point F, std::integral B>
 struct canFastCvt {             // we try to convert directly on all x86 because compiler gives a bunch of instructions(on top of cvtss2si...) and branches.
   static constexpr bool value = // arm and risc-v both have hardware support for unsigned or fixed point conversion.
 #ifdef ARCH_x86
-      ((NL<B>::digits > NL<F>::digits && sizeof(F) > sizeof(float)) || (sizeof(B) > sizeof(uintptr_t) && sizeof(F) > sizeof(uintptr_t))) && NL<F>::is_iec559 && (std::endian::native == std::endian::big || std::endian::native == std::endian::little)
+      (NL<B>::digits > NL<F>::digits && (sizeof(F) > sizeof(float) || sizeof(F) >= sizeof(uintptr_t)) && NL<F>::is_iec559 && (std::endian::native == std::endian::big || std::endian::native == std::endian::little))
 #else
       false
 #endif
-      ;
+	||sizeof(B)>8;//__int128 doesn't have fast hardware instructions.
 };
 template<std::unsigned_integral T0,class T1>requires std::unsigned_integral<T1>||std::same_as<T1,aint_dt<T0>>
 constexpr T0 rndRecSqrt(T0 s, T0 r0,T0 d,const T1 &r1,std::float_round_style style){
@@ -49,32 +49,31 @@ constexpr T0 rndRecSqrt(T0 s, T0 r0,T0 d,const T1 &r1,std::float_round_style sty
 constexpr float karatsubaUnderestimateProb[]={0.117326,0.0621874,0.0320361,0.0162645,0.00819528};
 export namespace fpn::core {
 template <std::floating_point F, std::integral B>
-CMATH_CE23 F toF(B v, uint8_t radix, std::float_round_style S)
-noexcept(noexcept(std::ldexp(v, int{}))) {
-  using nl = NL<F>;
-  if constexpr (NL<B>::digits > nl::digits) {
-    uint8_t sd;
-    if constexpr (std::is_unsigned_v<B>)
-      sd = NL<B>::digits - std::countl_zero(v);
-    else {
-      auto av = condNeg<std::make_unsigned_t<B>>(v, v < 0);
-      sd = NL<decltype(av)>::digits - std::countl_zero(av);
-    }
-
-    bool subnorm = nl::has_denorm == std::denorm_present && int8_t(sd - radix) <= nl::min_exponent - 1;
-    if (int8_t more = sd - nl::digits; S != std::round_indeterminate && !subnorm && __builtin_expect_with_probability(more > int8_t{0}, true, (NL<B>::digits - nl::digits) / static_cast<float>(NL<B>::digits))) {
-      // with radix<=128, sd<=128, then sd<=2 needs no rounding. we provide rounding because int to float point conversion rounding type is unspecified.
-      v = rnd(v, more, S); // rnd makes sure v only has `nl::digits` digits and no trailing 0.
-      radix -= more;
-
-      constexpr uint8_t explicitDigs = nl::digits - 1;
-      using Tb = Tbits<F>;
-      F cvt = canFastCvt<F, B>::value ? std::bit_cast<F>(Tb(Tb(nl::max_exponent - 1 + explicitDigs) << explicitDigs | v & ~(Tb{1} << explicitDigs))) /*no denorm or 0 here*/ : v;
-
-      return std::ldexp(cvt, -int8_t(radix));
-    }
-  }
-  return std::ldexp(v, -int16_t(radix)); // if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
+CMATH_CE23 F toF(B v, uint8_t exp, std::float_round_style S) noexcept(noexcept(std::ldexp(v, int{}))) {
+	if constexpr (NL<B>::digits > NL<F>::digits) {
+		using U = std::make_unsigned_t<B>;
+		const bool neg = v < 0;
+		U av = condNeg<U>(v, neg);
+		const uint8_t sd = NL<U>::digits - std::countl_zero(av);
+		if (NL<F>::has_denorm == std::denorm_present && int8_t(sd - exp) <= NL<F>::min_exponent - 1) { // !=0 subnorm only happens when (1) exp=127, sd<=1, (2) exp=128, sd<=2.
+			constexpr uint32_t a[] = {0, 0x200000, 0x400000, 0x600000};                                 // 0 is also correctly detected as subnorm for these exp.
+			uint32_t cvt = a[av << (exp == 127)] | uint32_t(neg) << 31;
+			return std::bit_cast<float>(cvt);
+		}
+		if (int8_t more = sd - NL<F>::digits; S != std::round_indeterminate && __builtin_expect_with_probability(more > int8_t{0}, true, (NL<B>::digits - NL<F>::digits) / static_cast<float>(NL<B>::digits))) { //  we provide rounding because int to float point conversion rounding type is unspecified.
+			av = condNeg<U>(rnd(v, more, S), neg);                                                                                                                                                                // rnd makes sure v only has NL<F>::digits and no trailing 0.
+			exp -= more;
+			if (canFastCvt<F, B>::value) { // can't be zero nor subnormal. this allows faster conversion.
+				constexpr uint8_t explicitD = NL<F>::digits - 1;
+				using Tb = Tbits<F>;
+				Tb a = Tb(NL<F>::max_exponent - 1 + explicitD - int8_t(exp)) << explicitD | av & ~(Tb{1} << explicitD);
+				a |= Tb(neg) << NL<Tb>::digits - 1;
+				return std::bit_cast<F>(a);
+			}
+		}
+		return std::ldexp(F(v), -int8_t(exp));
+	}
+	return std::ldexp(F(v), -exp); // if F is bigger than B, then B isn't largest, so efficient conversion by compiler is possible.
 }
 template <std::integral B, std::floating_point F>
 CMATH_CE23 B fromF(F v, uint8_t radix)

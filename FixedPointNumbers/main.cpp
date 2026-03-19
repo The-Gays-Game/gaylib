@@ -92,9 +92,7 @@ with message:
   base := 256
   y0 := 140737488355328 (0x800000000000)
 	*/
-	cout<<toF<double>(recSqrt<uint16_t>(256,2,round_to_nearest),2,round_to_nearest)<<endl;
-	cout<<toF<double>(uint64_t{140737488355328},50,round_toward_infinity)<<endl;
-	cout<<toF<double>(recSqrt<uint64_t>(uint64_t{256}<<48,50,round_to_nearest),50,round_to_nearest)<<endl;
+	cout<<toF<double>(int64_t{-9216114966248453503},0,round_toward_zero);
 	// std::cout<<fromF<uint8_t>(1.,0);
 	// std::vector<std::array<int16_t,2>> a;
 	// for (int16_t b=-255;b<=255;++b) {

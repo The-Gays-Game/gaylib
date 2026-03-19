@@ -17,15 +17,18 @@ using namespace fpn::core;
 using namespace fpn;
 using i128=__int128;
 using u128=unsigned __int128;
-TEST_CASE("fast path") {
+TEMPLATE_TEST_CASE("fast path","",int64_t,uint64_t) {
 	SECTION("toF") {
-		for (const auto _ : std::ranges::views::iota(0, 1 << 18)) {
-			for (int8_t radix : std::ranges::views::iota(int8_t{0}, int8_t{64})) {
-				uint64_t repr = uint64_t(rg32()) << 32 | rg32();
-				double t = std::ldexp(repr, -radix);
-				double y = toF<double>(repr, radix, std::round_indeterminate);
-				REQUIRE(t == y);
-			}
+		uint8_t exp=GENERATE(range(uint8_t{0},uint8_t(NL<TestType>::digits+1)));
+		std::float_round_style s=GENERATE(from_range(styleEnumMap));
+		for (uint32_t i=0;i<66666;++i) {
+			uint32_t a=rg32()%(NL<typename rankOf<TestType>::half>::max()-(1<<21)+1)+(1<<21);
+			TestType repr = TestType(a) << 32 | rg32();
+			uint8_t b=64-std::countl_zero(a);
+			//CAPTURE(repr,int(b),int(exp),s);
+			double t = std::ldexp(chngRdx(repr,b,53,s)<<b-53, -exp);
+			double y = toF<double>(repr, exp, s);
+			REQUIRE(t == y);
 		}
 	}
 	SECTION("fromF") {
@@ -144,6 +147,16 @@ TEST_CASE("edge cases") {
 		REQUIRE_THROWS_AS(div(666, 0, 1, std::round_indeterminate), std::domain_error);
 		using A = afx_t<int, 0, std::round_indeterminate>;
 		REQUIRE_THROWS_AS(A::raw(666).remQuo(A::raw(0)), std::domain_error);
+	}
+	SECTION("subnorm") {
+		constexpr uint8_t a[]={0,1,0,1,2,3,0,1,2,3,4,5,6,7},b[]{127,127,128,128,128,128,126,126,126,126,126,126,126,126};
+		for (uint8_t i=0;i<std::size(a);++i) {
+			float t=std::ldexpf(a[i],-b[i]);
+			float y0=toF<float>(a[i],b[i],std::round_indeterminate);
+			REQUIRE(t==y0);
+			float y1=toF<float>(-a[i],b[i],std::round_indeterminate);
+			REQUIRE(-t==y1);
+		}
 	}
 }
 TEMPLATE_TEST_CASE("bone 16", "", int16_t, uint16_t) {
